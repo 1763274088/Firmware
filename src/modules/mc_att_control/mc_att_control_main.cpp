@@ -959,6 +959,20 @@ MulticopterAttitudeControl::pid_attenuations(float tpa_breakpoint, float tpa_rat
 	return pidAttenuationPerAxis;
 }
 
+
+/*
+ *diturbance observer
+ *Input: ''
+ *Output: '_dis_esti'vector
+ */
+void
+MulticopterAttitudeControl::observe_disturbance(float dt)
+{
+	
+}
+
+
+
 /*
  * Attitude rates controller.
  * Input: '_rates_sp' vector, '_thrust_sp'
