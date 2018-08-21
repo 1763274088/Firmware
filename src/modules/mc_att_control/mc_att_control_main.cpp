@@ -193,9 +193,22 @@ private:
 	float				_thrust_sp;		/**< thrust setpoint */
 	math::Vector<3>		_att_control;	/**< attitude control vector */
 
+	math::Vector<3>     _distur_esti_1; /**< disturbance estimator 1 */
+	math::Vector<3>     _distur_esti_2; /**< disturbance estimator 2 */
+
+	math::Vector<3>     _distur_temp;    /**< _distur_pre */
+    math::Vector<3>     _distur_temp_pre;    /**< _distur_pre */
+    math::Vector<3>     _distur_int;    /**< _distur_int */
+
+    math::Vector<3>     _att_rates;    /**< _att_rates */
+
 	math::Matrix<3, 3>  _I;				/**< identity matrix */
 
 	math::Matrix<3, 3>	_board_rotation = {};	/**< rotation matrix for the orientation that the board is mounted */
+
+    math::Matrix<3, 3>  _moment_inertia;
+
+    math::Matrix<3, 3>  _moment_inertia_inv;
 
 	struct {
 		param_t roll_p;
@@ -470,8 +483,19 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	_thrust_sp = 0.0f;
 	_att_control.zero();
 
+	_distur_esti_1.zero();
+	_distur_esti_2.zero();
+
+	_distur_temp.zero();    
+    _distur_temp_pre.zero();    
+    _distur_int.zero(); 
+
+    _att_rates.zero();
+
 	_I.identity();
 	_board_rotation.identity();
+     _moment_inertia.identity();
+     _moment_inertia_inv.identity();
 
 	_params_handles.roll_p			= 	param_find("MC_ROLL_P");
 	_params_handles.roll_rate_p		= 	param_find("MC_ROLLRATE_P");
@@ -973,7 +997,30 @@ MulticopterAttitudeControl::pid_attenuations(float tpa_breakpoint, float tpa_rat
 void
 MulticopterAttitudeControl::observe_disturbance(float dt)
 {
-	
+	/*float _moment_inertia_temp[3][3]=
+		{1.0f,0.0f,0.0f,
+		0.0f,1.0f,0.0f,
+		0.0f,0.0f,1.0f};//quad inertia moment */
+
+    float _moment_inertia_temp[3][3]=
+		{0.0008f, 0.0f,     0.0f,
+		 0.0f,    0.00065f, 0.0f,
+		 0.0f,    0.0f,     0.0014f};//quad inertia moment
+
+	_moment_inertia.set(*_moment_inertia_temp);	
+    //_moment_inertia.print();
+    _moment_inertia_inv = _moment_inertia.inversed();
+    //_moment_inertia_inv.print();
+    //_att_rates.print();
+	//_att_control.print();
+	_distur_temp = _moment_inertia_inv * _att_control + _distur_esti_1;
+	_distur_int = _distur_int + _distur_temp;
+	_distur_temp.print();
+
+    _distur_esti_1 = (_att_rates - _distur_int) * 20.0f;
+    _distur_esti_2 = _moment_inertia * _distur_esti_1;
+    //_distur_esti_2.print();
+	//_att_control.print();
 }
 
 
@@ -1039,7 +1086,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 
 	/* angular rates error */
 	math::Vector<3> rates_err = _rates_sp - rates;
-
+    _att_rates = rates;
 	_att_control = rates_p_scaled.emult(rates_err) +
 		       _rates_int +
 		       rates_d_scaled.emult(_rates_prev - rates) / dt +
@@ -1266,7 +1313,7 @@ MulticopterAttitudeControl::task_main()
 
 			if (_v_control_mode.flag_control_rates_enabled) {
 				control_attitude_rates(dt);
-
+                 observe_disturbance(dt);
 				/* publish actuator controls */
 				_actuators.control[0] = (PX4_ISFINITE(_att_control(0))) ? _att_control(0) : 0.0f;
 				_actuators.control[1] = (PX4_ISFINITE(_att_control(1))) ? _att_control(1) : 0.0f;
