@@ -326,6 +326,11 @@ private:
 	void		control_attitude(float dt);
 
 	/**
+	 * disturbance obsever.
+	 */
+	void		observe_disturbance(float dt);
+
+	/**
 	 * Attitude rates controller.
 	 */
 	void		control_attitude_rates(float dt);
