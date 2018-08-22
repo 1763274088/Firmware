@@ -3,7 +3,7 @@ git status
 
 git add .
 
-git commit -m 'obsever diturbance function make test: error diturbance integral'
+git commit -m 'simulation test ok'
 
 git push
 

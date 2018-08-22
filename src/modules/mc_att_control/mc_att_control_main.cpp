@@ -1013,12 +1013,23 @@ MulticopterAttitudeControl::observe_disturbance(float dt)
     //_moment_inertia_inv.print();
     //_att_rates.print();
 	//_att_control.print();
-	_distur_temp = _moment_inertia_inv * _att_control + _distur_esti_1;
-	_distur_int = _distur_int + _distur_temp;
-	_distur_temp.print();
+	_distur_temp = _distur_int + (_moment_inertia_inv * _att_control + _distur_esti_1) * dt;
+	
+	//_distur_temp.print();
+	//_distur_int.print();
+    for (int i = AXIS_INDEX_ROLL; i < AXIS_COUNT; i++) {
+	    if (PX4_ISFINITE(_distur_temp(i)) && _distur_temp(i) > -0.3f && _distur_temp(i) < 0.3f) {
+		    _distur_int(i) = _distur_temp(i) ;
+	    }
+	}
+
+
+
+
 
     _distur_esti_1 = (_att_rates - _distur_int) * 20.0f;
     _distur_esti_2 = _moment_inertia * _distur_esti_1;
+   //_distur_esti_2 = {0.01,0,0.1f*sinf(100*dt)};
     //_distur_esti_2.print();
 	//_att_control.print();
 }
@@ -1090,7 +1101,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	_att_control = rates_p_scaled.emult(rates_err) +
 		       _rates_int +
 		       rates_d_scaled.emult(_rates_prev - rates) / dt +
-		       _params.rate_ff.emult(_rates_sp);
+		       _params.rate_ff.emult(_rates_sp) + _distur_esti_2 ;
 
 	_rates_sp_prev = _rates_sp;
 	_rates_prev = rates;
