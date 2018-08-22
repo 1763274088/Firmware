@@ -516,3 +516,55 @@ PARAM_DEFINE_FLOAT(MC_TPA_RATE_I, 0.0f);
  * @group Multicopter Attitude Control
  */
 PARAM_DEFINE_FLOAT(MC_TPA_RATE_D, 0.0f);
+
+/**
+ * distur_flag
+ *
+ * distur_flag
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal 1.0
+ * @increment 1.0
+ * @group Multicopter Attitude Control
+ */
+PARAM_DEFINE_FLOAT(DISTUR_FLAG, 1.0f);
+
+/**
+ * distur_eta
+ *
+ * distur_eta
+ *
+ * @min 0.0
+ * @max 25
+ * @decimal 0.1
+ * @increment 0.1
+ * @group Multicopter Attitude Control
+ */
+PARAM_DEFINE_FLOAT(DISTUR_ETA, 20.0f);
+
+/**
+ * distur_temp_limit
+ *
+ * distur_temp_limit
+ *
+ * @min 0.0
+ * @max 1
+ * @decimal 0.01
+ * @increment 0.01
+ * @group Multicopter Attitude Control
+ */
+PARAM_DEFINE_FLOAT(TEMP_LIMIT, 0.3f);
+
+/**
+ * distur_esti_2_limit
+ *
+ * distur_esti_2_limit
+ *
+ * @min 0.0
+ * @max 1
+ * @decimal 0.01
+ * @increment 0.01
+ * @group Multicopter Attitude Control
+ */
+PARAM_DEFINE_FLOAT(ESTI_LIMIT, 0.3f);

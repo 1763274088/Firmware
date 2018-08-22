@@ -258,6 +258,11 @@ private:
 
 		param_t board_offset[3];
 
+		param_t distur_flagg;
+		param_t distur_etaa;
+		param_t distur_temp_limitt;
+		param_t distur_esti_2_limitt;
+
 	}		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
@@ -293,6 +298,11 @@ private:
 		int board_rotation;
 
 		float board_offset[3];
+
+		float distur_flag;
+		float distur_eta;
+		float distur_temp_limit;
+		float distur_esti_2_limit;
 
 	}		_params;
 
@@ -476,6 +486,11 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	_params.board_offset[1] = 0.0f;
 	_params.board_offset[2] = 0.0f;
 
+    _params.distur_flag       = 0.0f;
+    _params.distur_eta        = 0.0f;
+    _params.distur_temp_limit = 0.0f;
+    _params.distur_esti_2_limit = 0.0f;
+
 	_rates_prev.zero();
 	_rates_sp.zero();
 	_rates_sp_prev.zero();
@@ -545,7 +560,10 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	_params_handles.board_offset[1] = param_find("SENS_BOARD_Y_OFF");
 	_params_handles.board_offset[2] = param_find("SENS_BOARD_Z_OFF");
 
-
+    _params_handles.distur_flagg           = param_find("DISTUR_FLAG");
+    _params_handles.distur_etaa            = param_find("DISTUR_ETA");
+    _params_handles.distur_temp_limitt     = param_find("TEMP_LIMIT");
+    _params_handles.distur_esti_2_limitt   = param_find("ESTI_LIMIT");
 
 	/* fetch initial parameter values */
 	parameters_update();
@@ -700,6 +718,11 @@ MulticopterAttitudeControl::parameters_update()
 	param_get(_params_handles.board_offset[0], &(_params.board_offset[0]));
 	param_get(_params_handles.board_offset[1], &(_params.board_offset[1]));
 	param_get(_params_handles.board_offset[2], &(_params.board_offset[2]));
+
+	param_get(_params_handles.distur_flagg,          &(_params.distur_flag));
+	param_get(_params_handles.distur_etaa ,          &(_params.distur_eta));
+	param_get(_params_handles.distur_temp_limitt ,   &(_params.distur_temp_limit));
+	param_get(_params_handles.distur_esti_2_limitt , &(_params.distur_esti_2_limit));
 
 	return OK;
 }
@@ -997,6 +1020,13 @@ MulticopterAttitudeControl::pid_attenuations(float tpa_breakpoint, float tpa_rat
 void
 MulticopterAttitudeControl::observe_disturbance(float dt)
 {
+	/* reset integral if disarmed */
+	if (!_armed.armed || !_vehicle_status.is_rotary_wing) {
+		_distur_int.zero();
+		_distur_esti_1.zero();
+		_distur_esti_2.zero();
+	}
+
 	/*float _moment_inertia_temp[3][3]=
 		{1.0f,0.0f,0.0f,
 		0.0f,1.0f,0.0f,
@@ -1018,20 +1048,26 @@ MulticopterAttitudeControl::observe_disturbance(float dt)
 	//_distur_temp.print();
 	//_distur_int.print();
     for (int i = AXIS_INDEX_ROLL; i < AXIS_COUNT; i++) {
-	    if (PX4_ISFINITE(_distur_temp(i)) && _distur_temp(i) > -0.3f && _distur_temp(i) < 0.3f) {
+	    if (PX4_ISFINITE(_distur_temp(i)) && _distur_temp(i) > -_params.distur_temp_limit && _distur_temp(i) < _params.distur_temp_limit) {
 		    _distur_int(i) = _distur_temp(i) ;
 	    }
 	}
 
-
-
-
-
-    _distur_esti_1 = (_att_rates - _distur_int) * 20.0f;
+    _distur_esti_1 = (_att_rates - _distur_int) * _params.distur_eta;
     _distur_esti_2 = _moment_inertia * _distur_esti_1;
    //_distur_esti_2 = {0.01,0,0.1f*sinf(100*dt)};
     //_distur_esti_2.print();
 	//_att_control.print();
+	if(_params.distur_flag  < 0.5f){
+       _distur_int    = {0, 0, 0};
+       _distur_esti_1 = {0, 0, 0};
+       _distur_esti_2 = {0, 0, 0};
+	}
+
+	for (int i = AXIS_INDEX_ROLL; i < AXIS_COUNT; i++) {
+	  _distur_esti_2(i) = math::constrain(_distur_esti_2(i),-_params.distur_esti_2_limit,_params.distur_esti_2_limit );
+	}
+
 }
 
 

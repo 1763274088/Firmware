@@ -3,7 +3,7 @@ git status
 
 git add .
 
-git commit -m 'simulation test ok'
+git commit -m 'can goon real test'
 
 git push
 
