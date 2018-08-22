@@ -1067,7 +1067,7 @@ MulticopterAttitudeControl::observe_disturbance(float dt)
 	for (int i = AXIS_INDEX_ROLL; i < AXIS_COUNT; i++) {
 	  _distur_esti_2(i) = math::constrain(_distur_esti_2(i),-_params.distur_esti_2_limit,_params.distur_esti_2_limit );
 	}
-
+    //_distur_esti_2.print();
 }
 
 
@@ -1359,8 +1359,8 @@ MulticopterAttitudeControl::task_main()
 			}
 
 			if (_v_control_mode.flag_control_rates_enabled) {
-				control_attitude_rates(dt);
-                 observe_disturbance(dt);
+				observe_disturbance(dt);
+				control_attitude_rates(dt); 
 				/* publish actuator controls */
 				_actuators.control[0] = (PX4_ISFINITE(_att_control(0))) ? _att_control(0) : 0.0f;
 				_actuators.control[1] = (PX4_ISFINITE(_att_control(1))) ? _att_control(1) : 0.0f;
