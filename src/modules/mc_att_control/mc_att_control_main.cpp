@@ -81,7 +81,12 @@
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
+
+
+
 #include <uORB/uORB.h>
+#include <uORB/topics/debug_key_value.h>
+
 
 /**
  * Multicopter attitude control app start / stop handling function
@@ -166,6 +171,11 @@ private:
 	struct battery_status_s				_battery_status;	/**< battery status */
 	struct sensor_gyro_s			_sensor_gyro;		/**< gyro data before thermal correctons and ekf bias estimates are applied */
 	struct sensor_correction_s		_sensor_correction;		/**< sensor thermal corrections */
+
+    //struct debug_key_value_s dbg = { .key = "velx", .value = 0.0f };
+    struct debug_key_value_s distur_roll;
+    struct debug_key_value_s distur_pitch;
+    struct debug_key_value_s distur_yaw;
 
 	union {
 		struct {
@@ -449,7 +459,12 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	_sensor_gyro{},
 	_sensor_correction{},
 
+     distur_roll{},
+     distur_pitch{},
+     distur_yaw{},
+
 	_saturation_status{},
+
 	/* performance counters */
 	_loop_perf(perf_alloc(PC_ELAPSED, "mc_att_control")),
 	_controller_latency_perf(perf_alloc_once(PC_ELAPSED, "ctrl_latency")),
@@ -1058,6 +1073,7 @@ MulticopterAttitudeControl::observe_disturbance(float dt)
    //_distur_esti_2 = {0.01,0,0.1f*sinf(100*dt)};
     //_distur_esti_2.print();
 	//_att_control.print();
+	//_params.distur_flag =1.0f;
 	if(_params.distur_flag  < 0.5f){
        _distur_int    = {0, 0, 0};
        _distur_esti_1 = {0, 0, 0};
@@ -1137,7 +1153,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	_att_control = rates_p_scaled.emult(rates_err) +
 		       _rates_int +
 		       rates_d_scaled.emult(_rates_prev - rates) / dt +
-		       _params.rate_ff.emult(_rates_sp) + _distur_esti_2 ;
+		       _params.rate_ff.emult(_rates_sp) - _distur_esti_2 ;
 
 	_rates_sp_prev = _rates_sp;
 	_rates_prev = rates;
@@ -1199,6 +1215,19 @@ MulticopterAttitudeControl::task_main()
 	/*
 	 * do subscriptions
 	 */
+	//advertise debug value  
+	const char ser[6]="droll";
+	// const char sep[7]="dpitch";
+	// const char sey[5]="dyaw";
+	memcpy(distur_roll.key, ser, sizeof(ser));
+	// memcpy(distur_pitch.key, sep, sizeof(sep));
+	// memcpy(distur_yaw.key, sey, sizeof(sey));
+    orb_advert_t pub_distur_roll = orb_advertise(ORB_ID(debug_key_value), &distur_roll);
+    // orb_advert_t pub_distur_pitch = orb_advertise(ORB_ID(debug_key_value), &distur_pitch);
+    // orb_advert_t pub_distur_yaw = orb_advertise(ORB_ID(debug_key_value), &distur_yaw);
+   
+
+
 	_v_att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
 	_v_rates_sp_sub = orb_subscribe(ORB_ID(vehicle_rates_setpoint));
 	_ctrl_state_sub = orb_subscribe(ORB_ID(control_state));
@@ -1278,6 +1307,15 @@ MulticopterAttitudeControl::task_main()
 			battery_status_poll();
 			control_state_poll();
 			sensor_correction_poll();
+            
+
+            distur_roll.value = _distur_esti_2(0);
+            orb_publish(ORB_ID(debug_key_value), pub_distur_roll, &distur_roll);
+            // distur_pitch.value = _distur_esti_2(1);
+            // orb_publish(ORB_ID(debug_key_value1), pub_distur_pitch, &distur_pitch);
+            // distur_yaw.value = _distur_esti_2(2);
+            // orb_publish(ORB_ID(debug_key_value), pub_distur_yaw, &distur_yaw);
+
 
 			/* Check if we are in rattitude mode and the pilot is above the threshold on pitch
 			 * or roll (yaw can rotate 360 in normal att control).  If both are true don't
