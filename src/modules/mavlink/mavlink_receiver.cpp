@@ -852,7 +852,6 @@ MavlinkReceiver::handle_message_set_position_target_local_ned(mavlink_message_t 
 	mavlink_msg_set_position_target_local_ned_decode(msg, &set_position_target_local_ned);
 
 	struct offboard_control_mode_s offboard_control_mode = {};
-
 	bool values_finite =
 		PX4_ISFINITE(set_position_target_local_ned.x) &&
 		PX4_ISFINITE(set_position_target_local_ned.y) &&
@@ -888,6 +887,8 @@ MavlinkReceiver::handle_message_set_position_target_local_ned(mavlink_message_t 
 		bool is_land_sp = (bool)(set_position_target_local_ned.type_mask & 0x2000);
 		bool is_loiter_sp = (bool)(set_position_target_local_ned.type_mask & 0x3000);
 		bool is_idle_sp = (bool)(set_position_target_local_ned.type_mask & 0x4000);
+
+
 
 		offboard_control_mode.timestamp = hrt_absolute_time();
 

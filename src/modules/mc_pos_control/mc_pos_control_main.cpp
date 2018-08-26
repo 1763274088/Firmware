@@ -270,6 +270,8 @@ private:
 	uint8_t _vxy_reset_counter;
 	uint8_t _heading_reset_counter;
 
+    float hover_throttle;
+
 	matrix::Dcmf _R_setpoint;
 
 	/**
@@ -462,6 +464,8 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_R_setpoint.identity();
 
 	_thrust_int.zero();
+
+    hover_throttle = 0.0f;
 
 	_params_handles.thr_min		= param_find("MPC_THR_MIN");
 	_params_handles.thr_max		= param_find("MPC_THR_MAX");
@@ -1767,11 +1771,13 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 void
 MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 {
+	
 	/* reset integrals if needed */
 	if (_control_mode.flag_control_climb_rate_enabled) {
 		if (_reset_int_z) {
 			_reset_int_z = false;
 			_thrust_int(2) = 0.0f;
+			hover_throttle = 0.0f;
 		}
 
 	} else {
@@ -1806,8 +1812,11 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 		thrust_sp = math::Vector<3>(_pos_sp_triplet.current.a_x, _pos_sp_triplet.current.a_y, _pos_sp_triplet.current.a_z);
 
 	} else {
+		hover_throttle = hover_throttle + 0.05f * dt;//
+		hover_throttle = math::constrain(hover_throttle, 0.0f, _params.thr_hover);
+
 		thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
-			    + _thrust_int - math::Vector<3>(0.0f, 0.0f, _params.thr_hover);
+			    + _thrust_int - math::Vector<3>(0.0f, 0.0f, hover_throttle);
 	}
 
 	if (!_control_mode.flag_control_velocity_enabled && !_control_mode.flag_control_acceleration_enabled) {
