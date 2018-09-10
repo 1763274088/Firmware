@@ -1722,7 +1722,7 @@ int
 Mavlink::task_main(int argc, char *argv[])
 {
 	int ch;
-	_baudrate = 57600;
+	_baudrate = 921600;
 	_datarate = 0;
 	_mode = MAVLINK_MODE_NORMAL;
 
