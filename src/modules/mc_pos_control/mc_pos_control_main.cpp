@@ -73,6 +73,14 @@
 #include <controllib/blocks.hpp>
 #include <controllib/block/BlockParam.hpp>
 
+#ifdef __cplusplus 
+extern "C" {
+#endif
+#include <mc_pos_control/adrc.h>
+#ifdef __cplusplus 
+}
+#endif
+
 /**
  * Multicopter position control app start / stop handling function
  *
@@ -133,6 +141,8 @@ private:
 	struct position_setpoint_triplet_s		_pos_sp_triplet;	/**< vehicle global position setpoint triplet */
 	struct vehicle_local_position_setpoint_s	_local_pos_sp;		/**< vehicle local position setpoint */
 	struct home_position_s				_home_pos; 				/**< home position */
+
+    ADRC_ESO_Def eso_alt;
 
 	control::BlockParamFloat _manual_thr_min; /**< minimal throttle output when flying in manual mode */
 	control::BlockParamFloat _manual_thr_max; /**< maximal throttle output when flying in manual mode */
@@ -355,6 +365,10 @@ private:
 	 */
 	void limit_vel_xy_gradually();
 
+    void adrc_eso_altitude(float dt);
+
+    void adrc_eso_altitude_init();
+
 	/**
 	 * Shim for calling task_main from task_create.
 	 */
@@ -504,6 +518,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.alt_mode = param_find("MPC_ALT_MODE");
 	_params_handles.opt_recover = param_find("VT_OPT_RECOV_EN");
 
+    eso_alt={};
 	/* fetch initial parameter values */
 	parameters_update(true);
 }
@@ -890,6 +905,31 @@ MulticopterPositionControl::limit_vel_xy_gradually()
 
 	_vel_sp(0) = _vel_sp(0) / vel_mag_xy * vel_limit;
 	_vel_sp(1) = _vel_sp(1) / vel_mag_xy * vel_limit;
+}
+
+void
+MulticopterPositionControl::adrc_eso_altitude(float dt)
+{
+    // float h = 0;
+    // float beta1 = 0;
+    // float beta2 = 0;
+    // float alpha = 0;
+    // float delta = 0;
+    // float b0 = 0;
+    //adrc_eso_init(&eso_alt,  h,  beta1, beta2,  alpha,  delta,  b0);
+}
+
+void
+MulticopterPositionControl::adrc_eso_altitude_init()
+{
+    float h = 0;
+    float beta1 = 0;
+    float beta2 = 0;
+    float alpha = 0;
+    float delta = 0;
+    float b0 = 0;
+    adrc_eso_init(&eso_alt,  h,  beta1, beta2,  alpha,  delta,  b0);
+     printf("%f\n",(double)h);
 }
 
 bool
@@ -2257,6 +2297,8 @@ MulticopterPositionControl::task_main()
 	bool was_armed = false;
 	bool was_landed = true;
 
+    adrc_eso_altitude_init();
+	
 	hrt_abstime t_prev = 0;
 
 	// Let's be safe and have the landing gear down by default
@@ -2293,7 +2335,7 @@ MulticopterPositionControl::task_main()
 
 		/* set dt for control blocks */
 		setDt(dt);
-
+        
 		/* set default max velocity in xy to vel_max */
 		_vel_max_xy = _params.vel_max_xy;
 

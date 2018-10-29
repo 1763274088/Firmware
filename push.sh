@@ -3,7 +3,7 @@ git status
 
 git add .
 
-git commit -m 'add qgc_parameter_yike. add .para'
+git commit -m 'add adrc.c add adrc.h'
 
 git push
 
