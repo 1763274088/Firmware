@@ -81,6 +81,9 @@ extern "C" {
 }
 #endif
 
+#include <uORB/uORB.h>
+#include <uORB/topics/debug_key_value.h>
+
 /**
  * Multicopter position control app start / stop handling function
  *
@@ -142,6 +145,9 @@ private:
 	struct vehicle_local_position_setpoint_s	_local_pos_sp;		/**< vehicle local position setpoint */
 	struct home_position_s				_home_pos; 				/**< home position */
 
+    //struct debug_key_value_s dbg = { .key = "velx", .value = 0.0f };
+    struct debug_key_value_s distur_altitude;
+
     ADRC_ESO_Def eso_alt;
 
 	control::BlockParamFloat _manual_thr_min; /**< minimal throttle output when flying in manual mode */
@@ -191,6 +197,15 @@ private:
 		param_t acc_down_max;
 		param_t alt_mode;
 		param_t opt_recover;
+
+		param_t eso_h;
+		param_t eso_beta1;
+		param_t eso_beta2;
+		param_t eso_beta3;
+		param_t eso_alpha1;
+		param_t eso_alpha2;
+		param_t eso_delta;
+		param_t eso_b0;
 	}		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
@@ -216,6 +231,16 @@ private:
 		float slow_land_alt1;
 		float slow_land_alt2;
 		uint32_t alt_mode;
+
+
+		float eso_h;
+		float eso_beta1;
+		float eso_beta2;
+		float eso_beta3;
+		float eso_alpha1;
+		float eso_alpha2;
+		float eso_delta;
+		float eso_b0;
 
 		int opt_recover;
 
@@ -281,6 +306,10 @@ private:
 	uint8_t _heading_reset_counter;
 
     float hover_throttle;
+
+    float distur_z;
+
+    float thrust_sp0;
 
 	matrix::Dcmf _R_setpoint;
 
@@ -480,6 +509,8 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_thrust_int.zero();
 
     hover_throttle = 0.0f;
+    distur_z = 0.0f;
+    thrust_sp0 = 0.0f;
 
 	_params_handles.thr_min		= param_find("MPC_THR_MIN");
 	_params_handles.thr_max		= param_find("MPC_THR_MAX");
@@ -517,6 +548,15 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.acc_down_max = param_find("MPC_ACC_DOWN_MAX");
 	_params_handles.alt_mode = param_find("MPC_ALT_MODE");
 	_params_handles.opt_recover = param_find("VT_OPT_RECOV_EN");
+
+	_params_handles.eso_h      = param_find("ESO_H");
+	_params_handles.eso_beta1  = param_find("ESO_BETA1");
+	_params_handles.eso_beta2  = param_find("ESO_BETA2");
+	_params_handles.eso_beta3  = param_find("ESO_BETA3");
+	_params_handles.eso_alpha1 = param_find("ESO_ALPHA1");
+	_params_handles.eso_alpha2 = param_find("ESO_ALPHA2");
+	_params_handles.eso_delta  = param_find("ESO_DELTA");
+	_params_handles.eso_b0     = param_find("ESO_B0");
 
     eso_alt={};
 	/* fetch initial parameter values */
@@ -651,6 +691,23 @@ MulticopterPositionControl::parameters_update(bool force)
 
 		param_get(_params_handles.mc_att_yaw_p, &v);
 		_params.mc_att_yaw_p = v;
+
+		param_get(_params_handles.eso_h, &v);
+		_params.eso_h = v;
+		param_get(_params_handles.eso_beta1, &v);
+		_params.eso_beta1 = v;
+		param_get(_params_handles.eso_beta2, &v);
+		_params.eso_beta2 = v;
+		param_get(_params_handles.eso_beta3, &v);
+		_params.eso_beta3 = v;
+		param_get(_params_handles.eso_alpha1, &v);
+		_params.eso_alpha1 = v;
+		param_get(_params_handles.eso_alpha2, &v);
+		_params.eso_alpha2 = v;
+		param_get(_params_handles.eso_delta, &v);
+		_params.eso_delta = v;
+		param_get(_params_handles.eso_b0, &v);
+		_params.eso_b0 = v;
 
 		/* takeoff and land velocities should not exceed maximum */
 		_params.tko_speed = fminf(_params.tko_speed, _params.vel_max_up);
@@ -910,26 +967,47 @@ MulticopterPositionControl::limit_vel_xy_gradually()
 void
 MulticopterPositionControl::adrc_eso_altitude(float dt)
 {
-    // float h = 0;
-    // float beta1 = 0;
-    // float beta2 = 0;
-    // float alpha = 0;
-    // float delta = 0;
-    // float b0 = 0;
-    //adrc_eso_init(&eso_alt,  h,  beta1, beta2,  alpha,  delta,  b0);
+    eso_alt.h      = _params.eso_h;
+    eso_alt.beta1  = _params.eso_beta1;
+    eso_alt.beta2  = _params.eso_beta2;
+    eso_alt.beta3  = _params.eso_beta3;
+    eso_alt.alpha1 = _params.eso_alpha1;
+    eso_alt.alpha2 = _params.eso_alpha2;
+    eso_alt.delta  = _params.eso_delta;
+    eso_alt.b0     = _params.eso_b0;
+
+	eso_alt.h = dt;
+	
+   // _att_sp.thrust = _att_sp.thrust ;
+	 //  _att_sp.thrust = _att_sp.thrust / eso_alt.b0;
+	//_att_sp.thrust = _att_sp.thrust - distur_z ;
+	distur_z = eso_alt.z3/eso_alt.b0;
+    eso_alt.u = thrust_sp0 ;
+    adrc_eso(&eso_alt, _pos(0));
+    
+    //printf("pos2%.3f\t\t,z1%.3f\t\t,_att_sp.thrust%.3f\n",(double)_pos(2),(double)eso_alt.z1,(double)_att_sp.thrust);
+    //printf("%.3f\n",(double)_pos(2));
+     //printf("eso_alt.h\t%.3f,eso_alt.beta1\t%.3f,eso_alt.beta2\t%.3f,eso_alt.alpha1\t%.3f,eso_alt.delta\t%.3f,eso_alt.b0\t%.3f\n",(double)eso_alt.h,(double)eso_alt.beta1,(double)eso_alt.beta2,(double)eso_alt.alpha1,(double)eso_alt.delta,(double)eso_alt.b0);
 }
 
 void
 MulticopterPositionControl::adrc_eso_altitude_init()
 {
-    float h = 0;
-    float beta1 = 0;
-    float beta2 = 0;
-    float alpha = 0;
-    float delta = 0;
-    float b0 = 0;
-    adrc_eso_init(&eso_alt,  h,  beta1, beta2,  alpha,  delta,  b0);
-     printf("%f\n",(double)h);
+    float h = 0.0f;
+    float beta1 = 100.0f;
+    float beta2 = 340.0f;
+    float beta3 = 2500.0f;
+    float alpha1 = 0.5;
+    float alpha2 = 0.25f;
+    float delta = 0.01f;
+    float b0 = 2.0f * 9.81f;
+    adrc_eso_init(&eso_alt,  h,  beta1, beta2,beta3,  alpha1,alpha2,  delta,  b0);
+    // printf("%.3f\n",(double)h);
+    // printf("%f\n",(double)eso_alt.h);
+    // printf("%f\n",(double)1.234f);
+    //PX4_WARN("result %.2f", (double)h);
+     //printf("pos2%.3f\t\t,z1%.3f\t\t,_att_sp.thrust%.3f\n",(double)_pos(2),(double)eso_alt.z1,(double)_att_sp.thrust);
+
 }
 
 bool
@@ -1856,7 +1934,7 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 		hover_throttle = math::constrain(hover_throttle, 0.0f, _params.thr_hover);
 
 		thrust_sp = vel_err.emult(_params.vel_p) + _vel_err_d.emult(_params.vel_d)
-			    + _thrust_int - math::Vector<3>(0.0f, 0.0f, hover_throttle);
+			    + _thrust_int - math::Vector<3>(0.0f, 0.0f, hover_throttle);			 
 	}
 
 	if (!_control_mode.flag_control_velocity_enabled && !_control_mode.flag_control_acceleration_enabled) {
@@ -2074,7 +2152,8 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 	}
 
 	_att_sp.thrust = math::max(thrust_body_z, thr_min);
-
+	thrust_sp0 = thrust_sp(0);
+    adrc_eso_altitude(dt);
 	/* update integrals */
 	if (_control_mode.flag_control_velocity_enabled && !saturation_xy) {
 		_thrust_int(0) += vel_err(0) * _params.vel_i(0) * dt;
@@ -2273,6 +2352,18 @@ MulticopterPositionControl::generate_attitude_setpoint(float dt)
 void
 MulticopterPositionControl::task_main()
 {
+
+	/*
+	 * do subscriptions
+	 */
+	//advertise debug value  
+	const char ser[6]="zalti";
+
+	memcpy(distur_altitude.key, ser, sizeof(ser));
+
+    orb_advert_t pub_distur_altitude = orb_advertise(ORB_ID(debug_key_value), &distur_altitude);
+
+
 	/*
 	 * do subscriptions
 	 */
@@ -2327,6 +2418,10 @@ MulticopterPositionControl::task_main()
 
 		poll_subscriptions();
 
+	    distur_altitude.value = distur_z;//_att_sp.thrust  -eso_alt.z3 / eso_alt.b0
+	    distur_altitude.value = eso_alt.z3;
+        orb_publish(ORB_ID(debug_key_value), pub_distur_altitude, &distur_altitude);
+
 		parameters_update(false);
 
 		hrt_abstime t = hrt_absolute_time();
@@ -2335,7 +2430,6 @@ MulticopterPositionControl::task_main()
 
 		/* set dt for control blocks */
 		setDt(dt);
-        
 		/* set default max velocity in xy to vel_max */
 		_vel_max_xy = _params.vel_max_xy;
 
@@ -2397,6 +2491,8 @@ MulticopterPositionControl::task_main()
 		    _control_mode.flag_control_acceleration_enabled) {
 
 			do_control(dt);
+
+
 
 			/* fill local position, velocity and thrust setpoint */
 			_local_pos_sp.timestamp = hrt_absolute_time();

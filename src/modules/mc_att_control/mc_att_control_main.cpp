@@ -1216,13 +1216,13 @@ MulticopterAttitudeControl::task_main()
 	 * do subscriptions
 	 */
 	//advertise debug value  
-	const char ser[6]="droll";
+	//const char ser[6]="droll";
 	// const char sep[7]="dpitch";
 	// const char sey[5]="dyaw";
-	memcpy(distur_roll.key, ser, sizeof(ser));
+	//memcpy(distur_roll.key, ser, sizeof(ser));
 	// memcpy(distur_pitch.key, sep, sizeof(sep));
 	// memcpy(distur_yaw.key, sey, sizeof(sey));
-    orb_advert_t pub_distur_roll = orb_advertise(ORB_ID(debug_key_value), &distur_roll);
+    ///orb_advert_t pub_distur_roll = orb_advertise(ORB_ID(debug_key_value), &distur_roll);
     // orb_advert_t pub_distur_pitch = orb_advertise(ORB_ID(debug_key_value), &distur_pitch);
     // orb_advert_t pub_distur_yaw = orb_advertise(ORB_ID(debug_key_value), &distur_yaw);
    
@@ -1309,8 +1309,8 @@ MulticopterAttitudeControl::task_main()
 			sensor_correction_poll();
             
 
-            distur_roll.value = _distur_esti_2(0);
-            orb_publish(ORB_ID(debug_key_value), pub_distur_roll, &distur_roll);
+            //distur_roll.value = _distur_esti_2(0);
+            //orb_publish(ORB_ID(debug_key_value), pub_distur_roll, &distur_roll);
             // distur_pitch.value = _distur_esti_2(1);
             // orb_publish(ORB_ID(debug_key_value1), pub_distur_pitch, &distur_pitch);
             // distur_yaw.value = _distur_esti_2(2);

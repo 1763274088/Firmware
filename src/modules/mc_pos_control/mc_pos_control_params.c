@@ -531,3 +531,99 @@ PARAM_DEFINE_FLOAT(MPC_LAND_ALT2, 5.0f);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(MPC_TKO_RAMP_T, 0.4f);
+
+/**
+ * ESO_H
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 1
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(ESO_H, 0.01f);
+
+/**
+ * ESO_BETA1
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 1000
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(ESO_BETA1, 90.0f);
+
+/**
+ * ESO_BETA2
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 4000
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(ESO_BETA2, 700.0f);
+
+/**
+ * ESO_BETA3
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 20000
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(ESO_BETA3, 5000.0f);
+
+/**
+ * ESO_ALPHA1
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(ESO_ALPHA1, 0.5f);
+
+/**
+ * ESO_ALPHA2
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(ESO_ALPHA2, 0.25f);
+
+/**
+ * ESO_DELTA
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 1
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(ESO_DELTA, 0.01f);
+
+/**
+ * ESO_B0
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 1000
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(ESO_B0, 20.0204f);

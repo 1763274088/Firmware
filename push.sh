@@ -3,7 +3,7 @@ git status
 
 git add .
 
-git commit -m 'add adrc.c add adrc.h'
+git commit -m 'test adrc.c and adrc.h'
 
 git push
 

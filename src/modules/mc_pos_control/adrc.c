@@ -75,13 +75,15 @@ float adrc_td_control(TD_Controller_Def* td_controller, float err)
 	return td_controller->v2;
 }
 
-void adrc_eso_init(ADRC_ESO_Def* eso_t, float h, float beta1, float beta2, float alpha, float delta, float b0)
+void adrc_eso_init(ADRC_ESO_Def* eso_t, float h, float beta1, float beta2,float beta3, float alpha1,float alpha2, float delta, float b0)
 {
 	eso_t->h = h;
 	eso_t->beta1 = beta1;
 	eso_t->beta2 = beta2;
+    eso_t->beta3 = beta3;
 	eso_t->u = 0.0f;
-	eso_t->alpha = alpha;
+	eso_t->alpha1 = alpha1;
+	eso_t->alpha2 = alpha2;
 	eso_t->delta = delta;
 	eso_t->b0 = b0;
 	
@@ -91,10 +93,13 @@ void adrc_eso_init(ADRC_ESO_Def* eso_t, float h, float beta1, float beta2, float
 void adrc_eso(ADRC_ESO_Def* eso_t, float y)
 {
 	float e = eso_t->z1 - y;
-	float fe = adrc_fal(e, eso_t->alpha, eso_t->delta);
+	float fe1 = adrc_fal(e, eso_t->alpha1, eso_t->delta);
+    float fe2 = adrc_fal(e, eso_t->alpha2, eso_t->delta);
 	
-	eso_t->z1 += eso_t->h*(eso_t->z2 + eso_t->b0*eso_t->u - eso_t->beta1*e);
-    eso_t->z2 -= eso_t->h*eso_t->beta2*fe;
+	eso_t->z1 += eso_t->h*(eso_t->z2 - eso_t->beta1*e);
+    eso_t->z2 += eso_t->h*(eso_t->z3 - eso_t->beta2*fe1 + eso_t->b0*eso_t->u);
+    eso_t->z3 -= eso_t->h*eso_t->beta3*fe2;
+
 }
 
 void adrc_leso_init(ADRC_LESO_Def* leso_t, float h, float w, float b0)
