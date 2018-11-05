@@ -90,6 +90,8 @@
 #include "mavlink_main.h"
 #include "mavlink_command_sender.h"
 
+orb_advert_t mavlink_log_pub_mocap = nullptr;
+
 static const float mg2ms2 = CONSTANTS_ONE_G / 1000.0f;
 
 MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
@@ -827,6 +829,7 @@ MavlinkReceiver::handle_message_att_pos_mocap(mavlink_message_t *msg)
 
 	att_pos_mocap.timestamp = sync_stamp(mocap.time_usec);
 	att_pos_mocap.timestamp_received = hrt_absolute_time();
+	//mavlink_and_console_log_info(&mavlink_log_pub_mocap, "[lpe] mocap.z: %.4f m ", double(mocap.z));
 
 	att_pos_mocap.q[0] = mocap.q[0];
 	att_pos_mocap.q[1] = mocap.q[1];
