@@ -9,7 +9,7 @@
  
 #include "adrc.h"
 #include <math.h>
-#include <../../NuttX/nuttx/include/stdlib.h>
+#include <stdlib.h>
 
 static float adrc_sign(float val)
 {
