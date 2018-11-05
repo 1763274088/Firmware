@@ -67,6 +67,13 @@ typedef struct
 	float c;
 }ADRC_NLSEF_Def;
 
+typedef struct
+{
+	uint16_t size;
+	uint16_t head;
+	float *data;
+}Delay_Block;
+
 float adrc_fhan(float v1, float v2, float r0, float h0);
 float adrc_fal(float e, float alpha, float delta);
 void adrc_td_init(ADRC_TD_Def* td_t, float h, float r0, float h0);
@@ -79,6 +86,11 @@ void adrc_leso_init(ADRC_LESO_Def* leso_t, float h, float w, float b0);
 void adrc_leso(ADRC_LESO_Def* leso_t, float y);
 void adrc_nlsef_init(ADRC_NLSEF_Def* nlsef_t, float h, float r1, float h1, float c);
 float adrc_nlsef(ADRC_NLSEF_Def* nlsef_t, float e1, float e2);
+
+uint8_t _delay_block_create(Delay_Block *block, uint16_t size);
+void _delay_block_flush(Delay_Block *block);
+void _delay_block_push(Delay_Block *block, float val);
+float _delay_block_pop(Delay_Block *block);
 
 
 #endif

@@ -132,7 +132,46 @@ void adrc_nlsef_init(ADRC_NLSEF_Def* nlsef_t, float h, float r1, float h1, float
 
 float adrc_nlsef(ADRC_NLSEF_Def* nlsef_t, float e1, float e2)
 {
+	//自抗扰控制技术中推荐了三种非线性组合方式，这里采用第三种，可调参数 c r1 h1，与pid参数类似
 	float u0 = -adrc_fhan(e1, nlsef_t->c*e2, nlsef_t->r1, nlsef_t->h1);
 
 	return u0;
+}
+
+uint8_t _delay_block_create(Delay_Block *block, uint16_t size)
+{
+	block->data = (float*)OS_MALLOC(size*sizeof(float));
+	if(block->data == NULL){
+		Console.print("delay block create fail\n");
+		return 1;
+	}
+	block->size = size;
+	block->head = 0;
+	for(int i = 0 ; i < size ; i++){
+		block->data[i] = 0.0f;
+	}
+	
+	return 0;
+}
+
+void _delay_block_flush(Delay_Block *block)
+{
+	if(block == NULL)
+		return;
+	block->head = 0;
+	for(int i = 0 ; i < block->size ; i++){
+		block->data[i] = 0.0f;
+	}
+}
+
+void _delay_block_push(Delay_Block *block, float val)
+{
+	block->head = (block->head+1) % block->size;
+	block->data[block->head] = val;
+}
+
+float _delay_block_pop(Delay_Block *block)
+{
+	uint16_t tail = (block->head+1) % block->size;
+	return block->data[tail];
 }
