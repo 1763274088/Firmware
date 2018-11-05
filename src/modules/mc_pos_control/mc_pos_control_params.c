@@ -689,7 +689,7 @@ PARAM_DEFINE_FLOAT(NLSEF_C, 0.01f);
  * If it's too slow the drone might scratch the ground and tip over.
  *
  * @min 0
- * @max 1000
+ * @max 1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(NLSEF_I, 20.0204f);
+PARAM_DEFINE_FLOAT(NLSEF_I, 0.01f);

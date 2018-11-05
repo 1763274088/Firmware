@@ -324,6 +324,7 @@ private:
 	uint8_t _heading_reset_counter;
 
     float hover_throttle;
+    float hover_throttle_adrc;
     float distur_z;
     float out_u;
     float nlsef_int;
@@ -528,6 +529,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_thrust_int.zero();
 
     hover_throttle = 0.0f;
+    hover_throttle_adrc = 0.0f;
     distur_z       = 0.0f;
     out_u          = 0.0f;
     nlsef_int      = 0.0f;
@@ -1034,14 +1036,16 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
     float adrc_e2 = 0          - accl_alt;//过渡过程中期望加速度 - 对实际速度求导得到的加速度
 
     nlsef_int += _params.nlsef_i * adrc_e1;
-    nlsef_int = math::constrain(nlsef_int, 0.0f, _params.thr_max);
+    nlsef_int = math::constrain(nlsef_int, -0.2f, 0.2f);
 
-    hover_throttle = hover_throttle + 0.05f * dt;//
-	hover_throttle = math::constrain(hover_throttle, 0.0f, _params.thr_hover);
+    hover_throttle_adrc = hover_throttle_adrc + 0.05f * dt;//
+	hover_throttle_adrc = math::constrain(hover_throttle_adrc, 0.0f, 0.5f);
 
-    float eso_u0 = adrc_nlsef(&nlsef_alt, adrc_e1, adrc_e2) + nlsef_int + hover_throttle;
+    float eso_u0 = adrc_nlsef(&nlsef_alt, adrc_e1, adrc_e2) - nlsef_int + hover_throttle_adrc;
+          eso_u0 = -nlsef_int + hover_throttle_adrc;
           out_u = eso_u0 - eso_alt.z3 / eso_alt.b0;
           out_u = eso_u0;
+
     //delay control signal
     _delay_block_push(&delay_alt, out_u);
     eso_alt.u = _delay_block_pop(&delay_alt);
@@ -2228,7 +2232,7 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 	_att_sp.thrust = math::max(thrust_body_z, thr_min);  
 
     adrc_eso_altitude(dt);
-    _att_sp.thrust = out_u;
+    
 
 	/* update integrals */
 	if (_control_mode.flag_control_velocity_enabled && !saturation_xy) {
@@ -2614,6 +2618,7 @@ MulticopterPositionControl::task_main()
 
 		/* update previous velocity for velocity controller D part */
 		_vel_prev = _vel;
+		_att_sp.thrust = out_u;
 
 		/* publish attitude setpoint
 		 * Do not publish if offboard is enabled but position/velocity/accel control is disabled,
