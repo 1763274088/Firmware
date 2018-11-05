@@ -9,6 +9,7 @@
  
 #include "adrc.h"
 #include <math.h>
+#include <../../NuttX/nuttx/include/stdlib.h>
 
 static float adrc_sign(float val)
 {
@@ -140,9 +141,8 @@ float adrc_nlsef(ADRC_NLSEF_Def* nlsef_t, float e1, float e2)
 
 uint8_t _delay_block_create(Delay_Block *block, uint16_t size)
 {
-	block->data = (float*)OS_MALLOC(size*sizeof(float));
+	block->data = (float*)malloc(size*sizeof(float));
 	if(block->data == NULL){
-		Console.print("delay block create fail\n");
 		return 1;
 	}
 	block->size = size;

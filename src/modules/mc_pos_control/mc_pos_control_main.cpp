@@ -216,6 +216,7 @@ private:
 	    param_t nlsef_h1;
 	    param_t nlsef_r1;
 	    param_t nlsef_c;
+	    param_t nlsef_i;
 
 	}		_params_handles;		/**< handles for interesting parameters */
 
@@ -586,7 +587,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
     eso_alt   ={};
     nlsef_alt ={};
-    delay_alt ={}；
+    delay_alt ={};
 
 	/* fetch initial parameter values */
 	parameters_update(true);
@@ -1016,10 +1017,10 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
     eso_alt.delta  = _params.eso_delta;
     eso_alt.b0     = _params.eso_b0;
 	
-	nlsef_alt.nlsef_h  = _params.nlsef_h;		
-	nlsef_alt.nlsef_h1 = _params.nlsef_h1;	
-	nlsef_alt.nlsef_r1 = _params.nlsef_r1;	
-	nlsef_alt.nlsef_c  = _params.nlsef_c;
+	nlsef_alt.h  = _params.nlsef_h;		
+	nlsef_alt.h1 = _params.nlsef_h1;	
+	nlsef_alt.r1 = _params.nlsef_r1;	
+	nlsef_alt.c  = _params.nlsef_c;
 
 	eso_alt.h = dt;
 	
@@ -1029,21 +1030,21 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
     //float adrc_e1 = _vel_sp（2） - eso_alt.z1 ；//过渡过程中期望速度- ESO观测的速度
     //float adrc_e2 = 0 - eso_alt.z2;//过渡过程中期望加速度 - ESO观测的加速度
     float accl_alt = _vel_err_d(2);//对速度求导得到的加速度
-    float adrc_e1 = _vel_sp(2) - _vel(2)；//过渡过程中期望速度   - 实际速度
+    float adrc_e1 = _vel_sp(2) - _vel(2);//过渡过程中期望速度   - 实际速度
     float adrc_e2 = 0          - accl_alt;//过渡过程中期望加速度 - 对实际速度求导得到的加速度
 
-    nlsef_int += _param.nlsef_i * adrc_e1;
-    nlsef_int = math::constrain(nlsef_int, 0, _params.thr_max);
+    nlsef_int += _params.nlsef_i * adrc_e1;
+    nlsef_int = math::constrain(nlsef_int, 0.0f, _params.thr_max);
 
     hover_throttle = hover_throttle + 0.05f * dt;//
 	hover_throttle = math::constrain(hover_throttle, 0.0f, _params.thr_hover);
 
-    float eso_u0 = adrc_nlsef(&nlsef_alt, float e1, float e2) + nlsef_int hover_throttle;
+    float eso_u0 = adrc_nlsef(&nlsef_alt, adrc_e1, adrc_e2) + nlsef_int + hover_throttle;
           out_u = eso_u0 - eso_alt.z3 / eso_alt.b0;
           out_u = eso_u0;
     //delay control signal
-    _delay_block_push(&roll_leso_delay, out_u);
-    eso_alt.u = _delay_block_pop(&roll_leso_delay);
+    _delay_block_push(&delay_alt, out_u);
+    eso_alt.u = _delay_block_pop(&delay_alt);
 
     //printf("pos2%.3f\t\t,z1%.3f\t\t,_att_sp.thrust%.3f\n",(double)_pos(2),(double)eso_alt.z1,(double)_att_sp.thrust);
     //printf("%.3f\n",(double)_pos(2));
