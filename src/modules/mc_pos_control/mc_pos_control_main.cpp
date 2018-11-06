@@ -84,6 +84,7 @@ extern "C" {
 #include <uORB/uORB.h>
 #include <uORB/topics/debug_key_value.h>
 
+
 /**
  * Multicopter position control app start / stop handling function
  *
@@ -1026,29 +1027,49 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
 
 	eso_alt.h = dt;
 	
-	distur_z = eso_alt.z3/eso_alt.b0;
-    adrc_eso(&eso_alt, _vel(2));
+	distur_z = eso_alt.z2/eso_alt.b0;
+    adrc_eso(&eso_alt, _vel(2));//update eso_alt.z1(velocity) and eso_alt.z2(disturbance)
 
     //float adrc_e1 = _vel_sp（2） - eso_alt.z1 ；//过渡过程中期望速度- ESO观测的速度
     //float adrc_e2 = 0 - eso_alt.z2;//过渡过程中期望加速度 - ESO观测的加速度
     float accl_alt = _vel_err_d(2);//对速度求导得到的加速度
     float adrc_e1 = _vel_sp(2) - _vel(2);//过渡过程中期望速度   - 实际速度
     float adrc_e2 = 0          - accl_alt;//过渡过程中期望加速度 - 对实际速度求导得到的加速度
-
+   // mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] adrc_e1: %.4f m ", double(adrc_e1));
     nlsef_int += _params.nlsef_i * adrc_e1;
     nlsef_int = math::constrain(nlsef_int, -0.2f, 0.2f);
 
     hover_throttle_adrc = hover_throttle_adrc + 0.05f * dt;//
-	hover_throttle_adrc = math::constrain(hover_throttle_adrc, 0.0f, 0.5f);
+	hover_throttle_adrc = math::constrain(hover_throttle_adrc, 0.0f, 0.4908f);
+    
+    //adrc_e2 = 0;
+    // for(float ii=-25.0f;ii<25.0f;ii=ii+0.01f)
+    // {
+    // 	nlsef_alt.r1=0.95;//control gain
+    // 	nlsef_alt.h1=1;
+    // 	adrc_e2=0;
+    //    float u1= -adrc_nlsef(&nlsef_alt, ii, adrc_e2);//e1 u1 tonghao
+    float u1= adrc_nlsef(&nlsef_alt, adrc_e1, adrc_e2);//e1 u1 tonghao
 
-    float eso_u0 = adrc_nlsef(&nlsef_alt, adrc_e1, adrc_e2) - nlsef_int + hover_throttle_adrc;
-          eso_u0 = -nlsef_int + hover_throttle_adrc;
-          out_u = eso_u0 - eso_alt.z3 / eso_alt.b0;
-          out_u = eso_u0;
+    //    
+    // }
 
+
+    //float eso_u0 =  u1 + nlsef_int - hover_throttle_adrc*eso_alt.b0;
+    float eso_u0 =  u1 + nlsef_int ;
+    // float eso_u0 =  u1 - nlsef_int ;
+         // eso_u0 = -nlsef_int + hover_throttle_adrc*eso_alt.b0;//hover_throttle_adrc*eso_alt.b0=9.81  eso_alt.b0=19.62(according to model of altitude)
+          out_u = (eso_u0 - eso_alt.z2) / eso_alt.b0;
+         // out_u = eso_u0 / eso_alt.b0;
+          //mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] pos_sp(2): %.4f m ", double(_pos_sp(2)));
+    //mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] hover_throttle_adrc: %.4f m ", double(hover_throttle_adrc));
+    //mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] u1: %.4f m ", double(u1));    
+    //mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] nlsef_int: %.4f m ", double(nlsef_int));
+    //mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] out_u: %.4f m \n", double(out_u));
     //delay control signal
     _delay_block_push(&delay_alt, out_u);
     eso_alt.u = _delay_block_pop(&delay_alt);
+
 
     //printf("pos2%.3f\t\t,z1%.3f\t\t,_att_sp.thrust%.3f\n",(double)_pos(2),(double)eso_alt.z1,(double)_att_sp.thrust);
     //printf("%.3f\n",(double)_pos(2));
@@ -1059,10 +1080,10 @@ void
 MulticopterPositionControl::adrc_eso_altitude_init()
 {
     float h = 0.0f;
-    float beta1 = 100.0f;
+    float beta1 = 100.0f;//
     float beta2 = 340.0f;
     float beta3 = 2500.0f;
-    float alpha1 = 0.5;
+    float alpha1 = 0.5;//
     float alpha2 = 0.25f;
     float delta = 0.01f;
     float b0 = 2.0f * 9.81f;
@@ -1082,9 +1103,9 @@ void
 MulticopterPositionControl::adrc_nlsef_altitude_init()
 {
 	float nlsef_h  = 0.01f;
-	float nlsef_h1 = 0.01f;
-	float nlsef_r1 = 0.01f;
-	float nlsef_c  = 0.01f;
+	float nlsef_h1 = 0.01f;//accuracy
+	float nlsef_r1 = 0.01f;//control gain
+	float nlsef_c  = 0.00f;//damping 
     adrc_nlsef_init(&nlsef_alt, nlsef_h, nlsef_r1, nlsef_h1, nlsef_c);
 }
 
@@ -2015,6 +2036,9 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 			    + _thrust_int - math::Vector<3>(0.0f, 0.0f, hover_throttle);			 
 	}
 
+    adrc_eso_altitude(dt);
+	thrust_sp(2) = out_u ;
+
 	if (!_control_mode.flag_control_velocity_enabled && !_control_mode.flag_control_acceleration_enabled) {
 		thrust_sp(0) = 0.0f;
 		thrust_sp(1) = 0.0f;
@@ -2230,8 +2254,6 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 	}
 
 	_att_sp.thrust = math::max(thrust_body_z, thr_min);  
-
-    adrc_eso_altitude(dt);
     
 
 	/* update integrals */
@@ -2499,7 +2521,7 @@ MulticopterPositionControl::task_main()
 		poll_subscriptions();
 
 	    distur_altitude.value = distur_z;//_att_sp.thrust  -eso_alt.z3 / eso_alt.b0
-	    distur_altitude.value = eso_alt.z3;
+	   // distur_altitude.value = eso_alt.z1;
         orb_publish(ORB_ID(debug_key_value), pub_distur_altitude, &distur_altitude);
 
 		parameters_update(false);
@@ -2618,7 +2640,6 @@ MulticopterPositionControl::task_main()
 
 		/* update previous velocity for velocity controller D part */
 		_vel_prev = _vel;
-		_att_sp.thrust = out_u;
 
 		/* publish attitude setpoint
 		 * Do not publish if offboard is enabled but position/velocity/accel control is disabled,

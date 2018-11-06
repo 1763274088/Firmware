@@ -626,7 +626,7 @@ PARAM_DEFINE_FLOAT(ESO_DELTA, 0.01f);
  * @max 1000
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(ESO_B0, 20.0204f);
+PARAM_DEFINE_FLOAT(ESO_B0, 19.62f);
 
 
 
@@ -644,7 +644,7 @@ PARAM_DEFINE_FLOAT(ESO_B0, 20.0204f);
  * @max 20000
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(NLSEF_H, 5000.0f);
+PARAM_DEFINE_FLOAT(NLSEF_H, 0.01f);
 
 /**
  * NLSEF_H1
@@ -656,7 +656,7 @@ PARAM_DEFINE_FLOAT(NLSEF_H, 5000.0f);
  * @max 2
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(NLSEF_H1, 0.5f);
+PARAM_DEFINE_FLOAT(NLSEF_H1, 1.0f);
 
 /**
  * NLSEF_R1
@@ -668,7 +668,7 @@ PARAM_DEFINE_FLOAT(NLSEF_H1, 0.5f);
  * @max 2
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(NLSEF_R1, 0.25f);
+PARAM_DEFINE_FLOAT(NLSEF_R1, 0.5f);
 
 /**
  * NLSEF_C
@@ -680,7 +680,7 @@ PARAM_DEFINE_FLOAT(NLSEF_R1, 0.25f);
  * @max 1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(NLSEF_C, 0.01f);
+PARAM_DEFINE_FLOAT(NLSEF_C, 0.3f);
 
 /**
  * NLSEF_I
@@ -692,4 +692,4 @@ PARAM_DEFINE_FLOAT(NLSEF_C, 0.01f);
  * @max 1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(NLSEF_I, 0.01f);
+PARAM_DEFINE_FLOAT(NLSEF_I, 0.00f);

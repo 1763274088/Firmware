@@ -528,7 +528,7 @@ PARAM_DEFINE_FLOAT(MC_TPA_RATE_D, 0.0f);
  * @increment 1.0
  * @group Multicopter Attitude Control
  */
-PARAM_DEFINE_FLOAT(DISTUR_FLAG, 1.0f);
+PARAM_DEFINE_FLOAT(DISTUR_FLAG, 0.0f);
 
 /**
  * distur_eta

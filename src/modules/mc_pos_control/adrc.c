@@ -93,13 +93,21 @@ void adrc_eso_init(ADRC_ESO_Def* eso_t, float h, float beta1, float beta2,float 
 
 void adrc_eso(ADRC_ESO_Def* eso_t, float y)
 {
-	float e = eso_t->z1 - y;
-	float fe1 = adrc_fal(e, eso_t->alpha1, eso_t->delta);
-    float fe2 = adrc_fal(e, eso_t->alpha2, eso_t->delta);
+	// float e = eso_t->z1 - y;
+	// float fe1 = adrc_fal(e, eso_t->alpha1, eso_t->delta);
+ //    float fe2 = adrc_fal(e, eso_t->alpha2, eso_t->delta);
 	
-	eso_t->z1 += eso_t->h*(eso_t->z2 - eso_t->beta1*e);
-    eso_t->z2 += eso_t->h*(eso_t->z3 - eso_t->beta2*fe1 + eso_t->b0*eso_t->u);
-    eso_t->z3 -= eso_t->h*eso_t->beta3*fe2;
+	// eso_t->z1 += eso_t->h*(eso_t->z2 - eso_t->beta1*e);
+ //    eso_t->z2 += eso_t->h*(eso_t->z3 - eso_t->beta2*fe1 + eso_t->b0*eso_t->u);
+ //    eso_t->z3 -= eso_t->h*eso_t->beta3*fe2;
+
+	float e = eso_t->z1 - y;
+	float fe = adrc_fal(e, eso_t->alpha1, eso_t->delta);
+	
+	eso_t->z1 += eso_t->h*(eso_t->z2 + eso_t->b0*eso_t->u - eso_t->beta1*e);
+    eso_t->z2 -= eso_t->h*eso_t->beta2*fe;
+
+
 
 }
 
