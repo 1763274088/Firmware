@@ -626,7 +626,7 @@ PARAM_DEFINE_FLOAT(ESO_DELTA, 0.01f);
  * @max 1000
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(ESO_B0, 19.62f);
+PARAM_DEFINE_FLOAT(ESO_B0, 32.7f);
 
 
 
@@ -656,7 +656,7 @@ PARAM_DEFINE_FLOAT(NLSEF_H, 0.01f);
  * @max 2
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(NLSEF_H1, 1.0f);
+PARAM_DEFINE_FLOAT(NLSEF_H1, 0.01f);
 
 /**
  * NLSEF_R1
@@ -693,3 +693,39 @@ PARAM_DEFINE_FLOAT(NLSEF_C, 0.3f);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(NLSEF_I, 0.00f);
+
+/**
+ * NLSEF_I
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 1
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(TD_H, 0.01f);
+
+/**
+ * TD_R0
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 1
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(TD_R0, 0.5f);
+
+/**
+ * TD_H0
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 1
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(TD_H0, 1.0f);
