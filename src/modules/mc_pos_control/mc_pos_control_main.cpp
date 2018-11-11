@@ -151,9 +151,11 @@ private:
 
     //adrc in altitude
     ADRC_ESO_Def   eso_alt;
+    ADRC_LESO_Def   leso_alt;
     ADRC_NLSEF_Def nlsef_alt;
     Delay_Block    delay_alt;//对nlsef计算出的控制量做了一个延迟。因为从控制量输入到控制系统做出反应有个延迟时间。因此对ESO的输入控制量做了一个延迟
     ADRC_TD_Def td_alt;
+    ADRC_LSEF_Def lsef_alt;
 
 	control::BlockParamFloat _manual_thr_min; /**< minimal throttle output when flying in manual mode */
 	control::BlockParamFloat _manual_thr_max; /**< maximal throttle output when flying in manual mode */
@@ -212,14 +214,26 @@ private:
 		param_t eso_alpha2;
 		param_t eso_delta;
 		param_t eso_b0;
-        
+
+        //leso_alt 高度方向上的leso的参数
+		param_t leso_h;
+		param_t leso_w0;
+		param_t leso_b0;
+		param_t leso_beta1;
+		param_t leso_beta2;
+
         //nlsef_alt 高度方向上非线性控制器的参数
 	    param_t nlsef_h;
 	    param_t nlsef_h1;
 	    param_t nlsef_r1;
 	    param_t nlsef_c;
 	    param_t nlsef_i;
-        
+
+	    //lsef_alt linear controller
+	    param_t lsef_wc;
+	    param_t lsef_kp;
+	    param_t lsef_kd;
+
         //td_alt altitude td parameters of td
 	    param_t td_h;
         param_t td_r0;
@@ -261,12 +275,21 @@ private:
 		float eso_delta;
 		float eso_b0;
 
+		float leso_h;
+		float leso_w0;
+		float leso_b0;
+		float leso_beta1;
+		float leso_beta2;
+
 		float nlsef_h;
 	    float nlsef_h1;
 	    float nlsef_r1;
 	    float nlsef_c;
 	    float nlsef_i;
 
+	    float lsef_wc;
+	    float lsef_kp;
+	    float lsef_kd;
 
 	    float td_h;
         float td_r0;
@@ -430,7 +453,11 @@ private:
 
     void adrc_eso_altitude_init();
 
+    void adrc_leso_altitude_init();
+
     void adrc_nlsef_altitude_init();
+
+    void adrc_lsef_altitude_init();
 
     void adrc_td_altitude_init();
 
@@ -597,18 +624,30 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.eso_delta  = param_find("ESO_DELTA");
 	_params_handles.eso_b0     = param_find("ESO_B0");
 
+	_params_handles.leso_h     = param_find("LESO_H");
+	_params_handles.leso_w0    = param_find("LESO_W0");
+	_params_handles.leso_b0    = param_find("LESO_B0");
+	_params_handles.leso_beta1 = param_find("LESO_BETA1");
+	_params_handles.leso_beta2 = param_find("LESO_BETA2");
+
 	_params_handles.nlsef_h    = param_find("NLSEF_H");
 	_params_handles.nlsef_h1   = param_find("NLSEF_H1");
 	_params_handles.nlsef_r1   = param_find("NLSEF_R1");
 	_params_handles.nlsef_c    = param_find("NLSEF_C");
 	_params_handles.nlsef_i    = param_find("NLSEF_I");
 
+	_params_handles.lsef_wc    = param_find("LSEF_WC");
+	_params_handles.lsef_kp    = param_find("LSEF_KP");
+	_params_handles.lsef_kd    = param_find("LSEF_KD");
+
     _params_handles.td_h       = param_find("TD_H");
     _params_handles.td_r0      = param_find("TD_R0");
     _params_handles.td_h0      = param_find("TD_H0");
 
     eso_alt   ={};
+    leso_alt   ={};
     nlsef_alt ={};
+    lsef_alt  ={};
     delay_alt ={};
     td_alt    ={};
 
@@ -762,6 +801,18 @@ MulticopterPositionControl::parameters_update(bool force)
 		param_get(_params_handles.eso_b0, &v);
 		_params.eso_b0 = v;
 
+		param_get(_params_handles.leso_h, &v);
+		_params.leso_h = v;
+		param_get(_params_handles.leso_w0, &v);
+		_params.leso_w0 = v;
+		param_get(_params_handles.leso_b0, &v);
+		_params.leso_b0 = v;
+		param_get(_params_handles.leso_beta1, &v);
+		_params.leso_beta1 = v;
+		param_get(_params_handles.leso_beta2, &v);
+		_params.leso_beta2 = v;
+
+
 		param_get(_params_handles.nlsef_h, &v);
 		_params.nlsef_h = v;
 		param_get(_params_handles.nlsef_h1, &v);
@@ -772,6 +823,13 @@ MulticopterPositionControl::parameters_update(bool force)
 		_params.nlsef_c = v;
 		param_get(_params_handles.nlsef_i, &v);
 		_params.nlsef_i = v;
+
+	    param_get(_params_handles.lsef_wc, &v);
+		_params.lsef_wc = v;
+	    param_get(_params_handles.lsef_kp, &v);
+		_params.lsef_kp = v;
+	    param_get(_params_handles.lsef_kd, &v);
+		_params.lsef_kd = v;
 
 		param_get(_params_handles.td_h, &v);
 		_params.td_h = v;
@@ -1038,6 +1096,22 @@ MulticopterPositionControl::limit_vel_xy_gradually()
 void
 MulticopterPositionControl::adrc_eso_altitude(float dt)
 {
+
+
+	/* reset integrals if needed */
+	if (_control_mode.flag_control_climb_rate_enabled) {
+		if (_reset_int_z) {
+			_reset_int_z = false;
+            leso_alt.z1 = 0.0f;
+            leso_alt.z2 = 0.0f;
+            hover_throttle_adrc = 0.0f;
+		}
+
+	} else {
+		_reset_int_z = true;
+	}
+
+
     eso_alt.h      = _params.eso_h;
     eso_alt.beta1  = _params.eso_beta1;
     eso_alt.beta2  = _params.eso_beta2;
@@ -1046,49 +1120,53 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
     eso_alt.alpha2 = _params.eso_alpha2;
     eso_alt.delta  = _params.eso_delta;
     eso_alt.b0     = _params.eso_b0;
+
+    leso_alt.h     = dt;
+    leso_alt.w0    = _params.leso_w0;
+    leso_alt.b0    = _params.leso_b0;
+    leso_alt.beta1   = _params.leso_beta1;
+    leso_alt.beta2    = _params.leso_beta2 ;
 	
 	nlsef_alt.h  = _params.nlsef_h;		
 	nlsef_alt.h1 = _params.nlsef_h1;	
 	nlsef_alt.r1 = _params.nlsef_r1;	
 	nlsef_alt.c  = _params.nlsef_c;
 
-	eso_alt.h = dt;
-	
-	distur_z = eso_alt.z2/eso_alt.b0;
-    adrc_eso(&eso_alt, _vel(2));//update eso_alt.z1(velocity) and eso_alt.z2(disturbance)
+	lsef_alt.wc = _params.lsef_wc;
+	lsef_alt.kp = _params.lsef_kp;
+	lsef_alt.kd = _params.lsef_kd;
 
+	eso_alt.h = dt;
+
+    hover_throttle_adrc = hover_throttle_adrc + 0.25f * dt;//
+	//hover_throttle_adrc = math::constrain(hover_throttle_adrc, 0.0f, 0.4908f);
+    hover_throttle_adrc = math::constrain(hover_throttle_adrc, 0.0f, 0.2f);
+	
+	distur_z = leso_alt.z2/leso_alt.b0;
+ 
     //float adrc_e1 = _vel_sp（2） - eso_alt.z1 ；//过渡过程中期望速度- ESO观测的速度
     //float adrc_e2 = 0 - eso_alt.z2;//过渡过程中期望加速度 - ESO观测的加速度
     float accl_alt = _vel_err_d(2);//对速度求导得到的加速度
-    float adrc_e1 = _vel_sp(2) - _vel(2);//过渡过程中期望速度   - 实际速度
-    float adrc_e2 = 0          +accl_alt;//过渡过程中期望加速度 - 对实际速度求导得到的加速度
+    //float adrc_e1 = _vel_sp(2) - _vel(2);//过渡过程中期望速度   - 实际速度
+    float adrc_e1 = _vel_sp(2) - leso_alt.z1;//过渡过程中期望速度   - 实际速度
+    float adrc_e2 = 0 + accl_alt ;//过渡过程中期望加速度 - 对实际速度求导得到的加速度
+    adrc_e2 = 0.0f;
    // mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] adrc_e1: %.4f m ", double(adrc_e1));
     nlsef_int += _params.nlsef_i * adrc_e1;
     nlsef_int = math::constrain(nlsef_int, -0.2f, 0.2f);
-
-    hover_throttle_adrc = hover_throttle_adrc + 0.05f * dt;//
-	hover_throttle_adrc = math::constrain(hover_throttle_adrc, 0.0f, 0.4908f);
     
-    //adrc_e2 = 0;
-    // for(float ii=-25.0f;ii<25.0f;ii=ii+0.01f)
-    // {
-    // 	nlsef_alt.r1=0.95;//control gain
-    // 	nlsef_alt.h1=1;
-    // 	adrc_e2=0;
-    //    float u1= -adrc_nlsef(&nlsef_alt, ii, adrc_e2);//e1 u1 tonghao
-    float u1= adrc_nlsef(&nlsef_alt, adrc_e1, adrc_e2);//e1 u1 tonghao
-
+    float u1= adrc_lsef(&lsef_alt, adrc_e1, adrc_e2); 
     //    
     // }
 
     //hover_throttle_adrc=0.4908f;
-    //float eso_u0 =  u1 + nlsef_int - hover_throttle_adrc*eso_alt.b0;
-    float eso_u0 =  u1 ;
+    //float eso_u0 =  u1 + nlsef_int - hover_throttle_adrc;
+    //float leso_u0 =  u1 ;
     // float eso_u0 =  u1 - nlsef_int ;
          // eso_u0 = -nlsef_int + hover_throttle_adrc*eso_alt.b0;//hover_throttle_adrc*eso_alt.b0=9.81  eso_alt.b0=19.62(according to model of altitude)
-          out_u = (eso_u0 - eso_alt.z2) / eso_alt.b0;//b0 = 9.81 / 0.3 =32.7
-
-          out_u = math::constrain(out_u, -0.6f, 0.6f);
+          out_u = u1 - hover_throttle_adrc - leso_alt.z2 / leso_alt.b0;//b0 = 9.81 / 0.3 =32.7
+          //out_u = eso_u0 ;
+          out_u = math::constrain(out_u, -0.6f, 0.0f);
     
        //  out_u = eso_u0 / eso_alt.b0;
           //mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] pos_sp(2): %.4f m ", double(_pos_sp(2)));
@@ -1097,8 +1175,6 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
     //mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] nlsef_int: %.4f m ", double(nlsef_int));
     //mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] out_u: %.4f m \n", double(out_u));
     //delay control signal
-    _delay_block_push(&delay_alt, out_u);
-    eso_alt.u = _delay_block_pop(&delay_alt);
 
 
     //printf("pos2%.3f\t\t,z1%.3f\t\t,_att_sp.thrust%.3f\n",(double)_pos(2),(double)eso_alt.z1,(double)_att_sp.thrust);
@@ -1119,7 +1195,7 @@ MulticopterPositionControl::adrc_eso_altitude_init()
     float b0 = 2.0f * 9.81f;
     adrc_eso_init(&eso_alt,  h,  beta1, beta2,beta3,  alpha1,alpha2,  delta,  b0);
 
-    _delay_block_create(&delay_alt, 3);//创建延迟模块，延迟参数需要调试
+    _delay_block_create(&delay_alt, 1);//创建延迟模块，延迟参数需要调试
 
     // printf("%.3f\n",(double)h);
     // printf("%f\n",(double)eso_alt.h);
@@ -1127,6 +1203,21 @@ MulticopterPositionControl::adrc_eso_altitude_init()
     //PX4_WARN("result %.2f", (double)h);
      //printf("pos2%.3f\t\t,z1%.3f\t\t,_att_sp.thrust%.3f\n",(double)_pos(2),(double)eso_alt.z1,(double)_att_sp.thrust);
 
+}
+
+void
+MulticopterPositionControl::adrc_leso_altitude_init()
+{
+    float h = 0.0f;
+    float w0 = 1.0f;
+    float b0 = 2.0f * 9.81f;
+    float beta1 = 1.0f;
+    float beta2 = 1.0f;
+
+    float wc = 0.0f;
+
+    adrc_leso_init(&leso_alt,  h,  w0,  b0,beta1,beta2);
+    adrc_lsef_init(&lsef_alt, wc);
 }
 
 void
@@ -1138,6 +1229,7 @@ MulticopterPositionControl::adrc_nlsef_altitude_init()
 	float nlsef_c  = 0.00f;//damping 
     adrc_nlsef_init(&nlsef_alt, nlsef_h, nlsef_r1, nlsef_h1, nlsef_c);
 }
+
 
 void
 MulticopterPositionControl::adrc_td_altitude_init()
@@ -2106,6 +2198,7 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 		/* we dont want to make any correction in body x and y*/
 		thrust_sp_body(0) = 0.0f;
 		thrust_sp_body(1) = 0.0f;
+		//thrust_sp_body.print();
 
 		/* make sure z component of thrust_sp_body is larger than 0 (positive thrust is downward) */
 		thrust_sp_body(2) = thrust_sp(2) > 0.0f ? thrust_sp(2) : 0.0f;
@@ -2306,8 +2399,13 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 		thrust_body_z = thr_max;
 	}
 
-	_att_sp.thrust = math::max(thrust_body_z, thr_min);  
-    
+	_att_sp.thrust = math::max(thrust_body_z, thr_min); 
+
+    _delay_block_push(&delay_alt, _att_sp.thrust-hover_throttle_adrc);
+            //eso_alt.u = _delay_block_pop(&delay_alt);
+    leso_alt.u = _delay_block_pop(&delay_alt);
+            //adrc_eso(&eso_alt, _vel(2));//update eso_alt.z1(velocity) and eso_alt.z2(disturbance)
+    adrc_leso(&leso_alt, _vel(2),hover_throttle_adrc);//update eso_alt.z1(velocity) and eso_alt.z2(disturbance)   
 
 	/* update integrals */
 	if (_control_mode.flag_control_velocity_enabled && !saturation_xy) {
@@ -2544,6 +2642,7 @@ MulticopterPositionControl::task_main()
 	bool was_landed = true;
 
     adrc_eso_altitude_init();
+    adrc_leso_altitude_init();
 	
 	hrt_abstime t_prev = 0;
 
@@ -2572,11 +2671,6 @@ MulticopterPositionControl::task_main()
 		}
 
 		poll_subscriptions();
-
-	    distur_altitude.value = distur_z;//_att_sp.thrust  -eso_alt.z3 / eso_alt.b0
-	   // distur_altitude.value = eso_alt.z1;
-	    //distur_altitude.value = td_alt.v1;
-        orb_publish(ORB_ID(debug_key_value), pub_distur_altitude, &distur_altitude);
 
 		parameters_update(false);
 
@@ -2649,7 +2743,6 @@ MulticopterPositionControl::task_main()
 			do_control(dt);
 
 
-
 			/* fill local position, velocity and thrust setpoint */
 			_local_pos_sp.timestamp = hrt_absolute_time();
 			_local_pos_sp.x = _pos_sp(0);
@@ -2680,6 +2773,11 @@ MulticopterPositionControl::task_main()
 
 			/* store last velocity in case a mode switch to position control occurs */
 			_vel_sp_prev = _vel;
+              
+            leso_alt.z1 = 0.0f;
+            leso_alt.z2 = 0.0f;
+            hover_throttle_adrc = 0.0f;
+
 		}
 
 		/* generate attitude setpoint from manual controls */
@@ -2695,6 +2793,14 @@ MulticopterPositionControl::task_main()
 		/* update previous velocity for velocity controller D part */
 		_vel_prev = _vel;
 
+	    //distur_altitude.value = -out_u;//_att_sp.thrust  -eso_alt.z3 / eso_alt.b0
+	    //distur_altitude.value = leso_alt.z1;
+	    distur_altitude.value = distur_z;
+	    //distur_altitude.value = td_alt.v1;
+	    //distur_altitude.value = _att_sp.thrust;
+        orb_publish(ORB_ID(debug_key_value), pub_distur_altitude, &distur_altitude);
+
+		
 		/* publish attitude setpoint
 		 * Do not publish if offboard is enabled but position/velocity/accel control is disabled,
 		 * in this case the attitude setpoint is published by the mavlink app. Also do not publish

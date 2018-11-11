@@ -54,6 +54,8 @@ typedef struct
 	float beta2;
 	float u;
 	float b0;
+
+	float w0;
 	/* LESO */
 	float z1;
 	float z2;
@@ -66,6 +68,17 @@ typedef struct
 	float r1;
 	float c;
 }ADRC_NLSEF_Def;
+
+typedef struct
+{
+	float kp;
+	float kd;
+	float wc;/*bandwith of the controller*/
+}ADRC_LSEF_Def;/* Linear control*/
+
+
+
+
 
 typedef struct
 {
@@ -82,10 +95,13 @@ void adrc_td_control_init(TD_Controller_Def* td_controller, float h, float r2, f
 float adrc_td_control(TD_Controller_Def* td_controller, float err);
 void adrc_eso_init(ADRC_ESO_Def* eso_t, float h, float beta1, float beta2,float beta3, float alpha1, float alpha2,float delta, float b0);
 void adrc_eso(ADRC_ESO_Def* eso_t, float y);
-void adrc_leso_init(ADRC_LESO_Def* leso_t, float h, float w, float b0);
-void adrc_leso(ADRC_LESO_Def* leso_t, float y);
+void adrc_leso_init(ADRC_LESO_Def* leso_t, float h, float w, float b0,float beta1, float beta2);
+void adrc_leso(ADRC_LESO_Def* leso_t, float y, float hover_thr);
 void adrc_nlsef_init(ADRC_NLSEF_Def* nlsef_t, float h, float r1, float h1, float c);
 float adrc_nlsef(ADRC_NLSEF_Def* nlsef_t, float e1, float e2);
+
+void adrc_lsef_init(ADRC_LSEF_Def* lsef_t, float wc);
+float adrc_lsef(ADRC_LSEF_Def* lsef_t, float e1, float e2);
 
 uint8_t _delay_block_create(Delay_Block *block, uint16_t size);
 void _delay_block_flush(Delay_Block *block);

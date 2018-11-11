@@ -111,23 +111,25 @@ void adrc_eso(ADRC_ESO_Def* eso_t, float y)
 
 }
 
-void adrc_leso_init(ADRC_LESO_Def* leso_t, float h, float w, float b0)
+void adrc_leso_init(ADRC_LESO_Def* leso_t, float h, float w, float b0,float beta1, float beta2)
 {
 	leso_t->h = h;
 	// (s + w)^2 = s^2 + beta_1 * s + beta_2
-	leso_t->beta1 = 2.0f*w;
-	leso_t->beta2 = w*w;
+	// leso_t->beta1 = 2.0f*w;
+	// leso_t->beta2 = w*w;
+	leso_t->beta1 = beta1;
+	leso_t->beta2 = beta2;
 	leso_t->u = 0.0f;
 	leso_t->b0 = b0;
 	
 	leso_t->z1 = leso_t->z2 = 0.0f;
 }
 
-void adrc_leso(ADRC_LESO_Def* leso_t, float y)
+void adrc_leso(ADRC_LESO_Def* leso_t, float y, float hover_thr)
 {
 	float e = leso_t->z1 - y;
 	
-	leso_t->z1 += leso_t->h*(leso_t->z2 + leso_t->b0*leso_t->u - leso_t->beta1*e);
+	leso_t->z1 += leso_t->h*(leso_t->z2 - leso_t->b0*leso_t->u - leso_t->beta1*e);
     leso_t->z2 -= leso_t->h*leso_t->beta2*e;
 }
 
@@ -146,6 +148,23 @@ float adrc_nlsef(ADRC_NLSEF_Def* nlsef_t, float e1, float e2)
 
 	return u0;
 }
+
+
+float adrc_lsef(ADRC_LSEF_Def* lsef_t, float e1, float e2)
+{
+    float u0 = lsef_t->kp*e1 + lsef_t->kd*e2;
+	return u0;
+}
+
+void adrc_lsef_init(ADRC_LSEF_Def* lsef_t, float wc)
+{
+	lsef_t->wc = wc;
+    lsef_t->kp =  wc * wc;
+    lsef_t->kd = 2 * wc;
+}
+
+
+
 
 uint8_t _delay_block_create(Delay_Block *block, uint16_t size)
 {
