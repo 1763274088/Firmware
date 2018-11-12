@@ -760,7 +760,7 @@ PARAM_DEFINE_FLOAT(NLSEF_I, 0.02f);
  * @max 100
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(LSEF_KP, 1.0f);
+PARAM_DEFINE_FLOAT(LSEF_KP, 0.5f);
 
 
 /**
@@ -824,3 +824,104 @@ PARAM_DEFINE_FLOAT(TD_R0, 0.5f);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(TD_H0, 1.0f);
+
+
+
+
+/**
+ * LSEF_KPX
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 100
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(LSEF_KPX, 0.09f);
+
+
+/**
+ * LSEF_KDX
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 100
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(LSEF_KDX, 0.01f);
+
+/**
+ * LSEF_WCX
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 100
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(LSEF_WCX, 1.0f);
+
+
+/**
+ * LESO_HX
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(LESO_HX, 0.01f);
+
+/**
+ * LESO_W0X
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 50
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(LESO_W0X ,0.5f);
+
+/**
+ * LESO_B0X
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min -1000
+ * @max 1000
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(LESO_B0X, -19.62f);
+
+/**
+ * LESO_BETA1X
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 5000
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(LESO_BETA1X ,30.0f);
+
+/**
+ * LESO_BETA2X
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min 0
+ * @max 10000
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(LESO_BETA2X, 100.0f);

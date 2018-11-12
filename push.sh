@@ -3,7 +3,7 @@ git status
 
 git add .
 
-git commit -m 'alt_adrc real success, need jin yi bu fly test an zhe qu xian picture  '
+git commit -m 'x_adrc simulation success, need jin yi bu fly test  '
 
 git push
 

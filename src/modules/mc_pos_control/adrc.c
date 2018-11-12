@@ -125,7 +125,7 @@ void adrc_leso_init(ADRC_LESO_Def* leso_t, float h, float w, float b0,float beta
 	leso_t->z1 = leso_t->z2 = 0.0f;
 }
 
-void adrc_leso(ADRC_LESO_Def* leso_t, float y, float hover_thr)
+void adrc_leso(ADRC_LESO_Def* leso_t, float y)
 {
 	float e = leso_t->z1 - y;
 	
