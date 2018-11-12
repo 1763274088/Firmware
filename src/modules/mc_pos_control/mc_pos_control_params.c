@@ -672,10 +672,10 @@ PARAM_DEFINE_FLOAT(LESO_B0, 19.62f);
  * If it's too slow the drone might scratch the ground and tip over.
  *
  * @min 0
- * @max 50
+ * @max 5000
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(LESO_BETA1 ,30.0f);
+PARAM_DEFINE_FLOAT(LESO_BETA1 ,100.0f);
 
 /**
  * LESO_BETA2
@@ -684,10 +684,10 @@ PARAM_DEFINE_FLOAT(LESO_BETA1 ,30.0f);
  * If it's too slow the drone might scratch the ground and tip over.
  *
  * @min 0
- * @max 1000
+ * @max 10000
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(LESO_BETA2, 300.0f);
+PARAM_DEFINE_FLOAT(LESO_BETA2, 3333.0f);
 
 
 /**
@@ -748,7 +748,7 @@ PARAM_DEFINE_FLOAT(NLSEF_C, 0.3f);
  * @max 1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(NLSEF_I, 0.00f);
+PARAM_DEFINE_FLOAT(NLSEF_I, 0.02f);
 
 /**
  * LSEF_KP
@@ -773,7 +773,7 @@ PARAM_DEFINE_FLOAT(LSEF_KP, 1.0f);
  * @max 100
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(LSEF_KD, 0.0f);
+PARAM_DEFINE_FLOAT(LSEF_KD, 0.01f);
 
 /**
  * LSEF_WC

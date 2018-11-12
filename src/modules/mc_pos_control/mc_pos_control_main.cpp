@@ -1105,10 +1105,15 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
             leso_alt.z1 = 0.0f;
             leso_alt.z2 = 0.0f;
             hover_throttle_adrc = 0.0f;
+            nlsef_int = 0.0f;
 		}
 
 	} else {
 		_reset_int_z = true;
+		leso_alt.z1 = 0.0f;
+        leso_alt.z2 = 0.0f;
+        hover_throttle_adrc = 0.0f;
+        nlsef_int = 0.0f;
 	}
 
 
@@ -1138,7 +1143,7 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
 
 	eso_alt.h = dt;
 
-    hover_throttle_adrc = hover_throttle_adrc + 0.25f * dt;//
+    hover_throttle_adrc = hover_throttle_adrc + 0.1f * dt;//
 	//hover_throttle_adrc = math::constrain(hover_throttle_adrc, 0.0f, 0.4908f);
     hover_throttle_adrc = math::constrain(hover_throttle_adrc, 0.0f, 0.2f);
 	
@@ -1147,10 +1152,10 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
     //float adrc_e1 = _vel_sp（2） - eso_alt.z1 ；//过渡过程中期望速度- ESO观测的速度
     //float adrc_e2 = 0 - eso_alt.z2;//过渡过程中期望加速度 - ESO观测的加速度
     float accl_alt = _vel_err_d(2);//对速度求导得到的加速度
-    //float adrc_e1 = _vel_sp(2) - _vel(2);//过渡过程中期望速度   - 实际速度
-    float adrc_e1 = _vel_sp(2) - leso_alt.z1;//过渡过程中期望速度   - 实际速度
+    float adrc_e1 = _vel_sp(2) - _vel(2);//过渡过程中期望速度   - 实际速度
+    //float adrc_e1 = _vel_sp(2) - leso_alt.z1;//过渡过程中期望速度   - 实际速度
     float adrc_e2 = 0 + accl_alt ;//过渡过程中期望加速度 - 对实际速度求导得到的加速度
-    adrc_e2 = 0.0f;
+    //adrc_e2 = 0.0f;
    // mavlink_and_console_log_info(&_mavlink_log_pub, "[pos_ctl] adrc_e1: %.4f m ", double(adrc_e1));
     nlsef_int += _params.nlsef_i * adrc_e1;
     nlsef_int = math::constrain(nlsef_int, -0.2f, 0.2f);
@@ -1164,7 +1169,7 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
     //float leso_u0 =  u1 ;
     // float eso_u0 =  u1 - nlsef_int ;
          // eso_u0 = -nlsef_int + hover_throttle_adrc*eso_alt.b0;//hover_throttle_adrc*eso_alt.b0=9.81  eso_alt.b0=19.62(according to model of altitude)
-          out_u = u1 - hover_throttle_adrc - leso_alt.z2 / leso_alt.b0;//b0 = 9.81 / 0.3 =32.7
+          out_u = u1 - hover_throttle_adrc - leso_alt.z2 / leso_alt.b0 + nlsef_int;//b0 = 9.81 / 0.3 =32.7
           //out_u = eso_u0 ;
           out_u = math::constrain(out_u, -0.6f, 0.0f);
     
@@ -2794,10 +2799,11 @@ MulticopterPositionControl::task_main()
 		_vel_prev = _vel;
 
 	    //distur_altitude.value = -out_u;//_att_sp.thrust  -eso_alt.z3 / eso_alt.b0
-	    //distur_altitude.value = leso_alt.z1;
+	   // distur_altitude.value = leso_alt.z1;
 	    distur_altitude.value = distur_z;
 	    //distur_altitude.value = td_alt.v1;
 	    //distur_altitude.value = _att_sp.thrust;
+	    //distur_altitude.value =_control_mode.flag_control_climb_rate_enabled;
         orb_publish(ORB_ID(debug_key_value), pub_distur_altitude, &distur_altitude);
 
 		
