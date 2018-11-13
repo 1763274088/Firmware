@@ -255,6 +255,9 @@ private:
         param_t td_r0;
         param_t td_h0;
 
+        param_t flag_adrc_alt;
+        param_t flag_adrc_x;
+
 	}		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
@@ -316,6 +319,9 @@ private:
 		float leso_b0x;
 		float leso_beta1x;
 		float leso_beta2x;
+
+		float flag_adrc_alt;
+        float flag_adrc_x;
 
 	    float td_h;
         float td_r0;
@@ -684,6 +690,9 @@ MulticopterPositionControl::MulticopterPositionControl() :
     _params_handles.td_r0      = param_find("TD_R0");
     _params_handles.td_h0      = param_find("TD_H0");
 
+    _params_handles.flag_adrc_alt      = param_find("FLAG_ADRC_ALT");
+    _params_handles.flag_adrc_x      = param_find("FLAG_ADRC_X");
+
     eso_alt    ={};
     leso_alt   ={};
     leso_x     ={};
@@ -898,6 +907,11 @@ MulticopterPositionControl::parameters_update(bool force)
 		_params.td_r0 = v;
 		param_get(_params_handles.td_h0, &v);
 		_params.td_h0 = v;
+
+		param_get(_params_handles.flag_adrc_x, &v);
+		_params.flag_adrc_x = v;
+		param_get(_params_handles.flag_adrc_alt, &v);
+		_params.flag_adrc_alt = v;
 
 		/* takeoff and land velocities should not exceed maximum */
 		_params.tko_speed = fminf(_params.tko_speed, _params.vel_max_up);
@@ -1168,8 +1182,6 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
             hover_throttle_adrc = 0.0f;
             nlsef_int = 0.0f;
 
-            leso_x.z1 = 0.0f;
-            leso_x.z2 = 0.0f;
 		}
 
 	} else {
@@ -1179,7 +1191,19 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
         hover_throttle_adrc = 0.0f;
         nlsef_int = 0.0f;
 
-        leso_x.z1 = 0.0f;
+	}
+	if (_control_mode.flag_control_velocity_enabled) {
+		if (_reset_int_xy) {
+			_reset_int_xy = false;
+			_thrust_int(0) = 0.0f;
+			_thrust_int(1) = 0.0f;
+			leso_x.z1 = 0.0f;
+            leso_x.z2 = 0.0f;
+		}
+
+	} else {
+		_reset_int_xy = true;
+		leso_x.z1 = 0.0f;
         leso_x.z2 = 0.0f;
 	}
 
@@ -1217,7 +1241,6 @@ MulticopterPositionControl::adrc_eso_altitude(float dt)
     leso_x.b0       = _params.leso_b0x;
     leso_x.beta1    = _params.leso_beta1x;
     leso_x.beta2    = _params.leso_beta2x;
-
 
 	eso_alt.h = dt;
 
@@ -2274,8 +2297,16 @@ MulticopterPositionControl::calculate_thrust_setpoint(float dt)
 	}
 
     adrc_eso_altitude(dt);
-	thrust_sp(2) = out_u ;
-	thrust_sp(0) = out_ux ;
+
+    if(_params.flag_adrc_alt > 0.0f)
+    {
+	    thrust_sp(2) = out_u ;
+    }
+
+    if(_params.flag_adrc_x > 0.0f)
+    {
+	    thrust_sp(0) = out_ux ;
+    }
 
 	if (!_control_mode.flag_control_velocity_enabled && !_control_mode.flag_control_acceleration_enabled) {
 		thrust_sp(0) = 0.0f;
@@ -2898,7 +2929,7 @@ MulticopterPositionControl::task_main()
 	   // distur_altitude.value = leso_alt.z1;
 	    //distur_altitude.value = distur_z;
 	    distur_altitude.value = distur_x;
-	    //distur_altitude.value = leso_x.z1;
+	    distur_altitude.value = leso_x.z1;
 	    //distur_altitude.value = td_alt.v1;
 	    //distur_altitude.value = _att_sp.thrust;
 	    //distur_altitude.value =_control_mode.flag_control_climb_rate_enabled;
