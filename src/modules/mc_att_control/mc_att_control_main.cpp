@@ -87,6 +87,13 @@
 #include <uORB/uORB.h>
 #include <uORB/topics/debug_key_value.h>
 
+#ifdef __cplusplus 
+extern "C" {
+#endif
+#include <mc_pos_control/adrc.h>
+#ifdef __cplusplus 
+}
+#endif
 
 /**
  * Multicopter attitude control app start / stop handling function
@@ -174,8 +181,16 @@ private:
 
     //struct debug_key_value_s dbg = { .key = "velx", .value = 0.0f };
     struct debug_key_value_s distur_roll;
-    struct debug_key_value_s distur_pitch;
-    struct debug_key_value_s distur_yaw;
+
+    //adrc in attitude
+    ADRC_LESO_Def   leso_x_att;
+    ADRC_LESO_Def   leso_y_att;
+
+    Delay_Block    delay_x_att;   
+    Delay_Block    delay_y_att; 
+
+    ADRC_LSEF_Def lsef_x_att;
+    ADRC_LSEF_Def lsef_y_att;
 
 	union {
 		struct {
@@ -273,6 +288,34 @@ private:
 		param_t distur_temp_limitt;
 		param_t distur_esti_2_limitt;
 
+        //leso_x_att attitude方向上的leso的参数
+		param_t leso_hx_att;
+		param_t leso_w0x_att;
+		param_t leso_b0x_att;
+		param_t leso_beta1x_att;
+		param_t leso_beta2x_att;
+
+        //leso_y_att attitude方向上的leso的参数
+		param_t leso_hy_att;
+		param_t leso_w0y_att;
+		param_t leso_b0y_att;
+		param_t leso_beta1y_att;
+		param_t leso_beta2y_att;
+
+	    //lsef_x_att linear controller
+	    param_t lsef_wcx_att;
+	    param_t lsef_kpx_att;
+	    param_t lsef_kdx_att;
+
+	    //lsef_y_att linear controller
+	    param_t lsef_wcy_att;
+	    param_t lsef_kpy_att;
+	    param_t lsef_kdy_att;
+
+        param_t flag_adrc_x_att;
+        param_t flag_adrc_y_att;
+
+
 	}		_params_handles;		/**< handles for interesting parameters */
 
 	struct {
@@ -313,6 +356,33 @@ private:
 		float distur_eta;
 		float distur_temp_limit;
 		float distur_esti_2_limit;
+
+		        //leso_x_att attitude方向上的leso的参数
+		float leso_hx_att;
+		float leso_w0x_att;
+		float leso_b0x_att;
+		float leso_beta1x_att;
+		float leso_beta2x_att;
+
+        //leso_y_att attitude方向上的leso的参数
+		float leso_hy_att;
+		float leso_w0y_att;
+		float leso_b0y_att;
+		float leso_beta1y_att;
+		float leso_beta2y_att;
+
+	    //lsef_x_att linear controller
+	    float lsef_wcx_att;
+	    float lsef_kpx_att;
+	    float lsef_kdx_att;
+
+	    //lsef_y_att linear controller
+	    float lsef_wcy_att;
+	    float lsef_kpy_att;
+	    float lsef_kdy_att;
+
+        float flag_adrc_x_att;
+        float flag_adrc_y_att;
 
 	}		_params;
 
@@ -362,6 +432,11 @@ private:
 	 * disturbance obsever.
 	 */
 	void		observe_disturbance(float dt);
+
+    /**
+     * attitude eso
+     */
+    void        attitude_leso(float dt);
 
 	/**
 	 * Attitude rates controller.
@@ -458,10 +533,6 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 	_battery_status{},
 	_sensor_gyro{},
 	_sensor_correction{},
-
-     distur_roll{},
-     distur_pitch{},
-     distur_yaw{},
 
 	_saturation_status{},
 
@@ -580,6 +651,41 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
     _params_handles.distur_temp_limitt     = param_find("TEMP_LIMIT");
     _params_handles.distur_esti_2_limitt   = param_find("ESTI_LIMIT");
 
+
+
+
+
+
+
+	_params_handles.lsef_wcx_att    = param_find("LSEF_WCX_ATT");
+	_params_handles.lsef_kpx_att    = param_find("LSEF_KPX_ATT");
+	_params_handles.lsef_kdx_att    = param_find("LSEF_KDX_ATT");
+
+	_params_handles.lsef_wcy_att    = param_find("LSEF_WCY_ATT");
+	_params_handles.lsef_kpy_att    = param_find("LSEF_KPY_ATT");
+	_params_handles.lsef_kdy_att    = param_find("LSEF_KDY_ATT");
+
+	_params_handles.leso_hx_att     = param_find("LESO_HX_ATT");
+	_params_handles.leso_w0x_att    = param_find("LESO_W0X_ATT");
+	_params_handles.leso_b0x_att    = param_find("LESO_B0X_ATT");
+	_params_handles.leso_beta1x_att = param_find("LESO_BETA1X_ATT");
+	_params_handles.leso_beta2x_att = param_find("LESO_BETA2X_ATT");
+
+	_params_handles.leso_hy_att     = param_find("LESO_HY_ATT");
+	_params_handles.leso_w0y_att    = param_find("LESO_W0Y_ATT");
+	_params_handles.leso_b0y_att    = param_find("LESO_B0Y_ATT");
+	_params_handles.leso_beta1y_att = param_find("LESO_BETA1Y_ATT");
+	_params_handles.leso_beta2y_att = param_find("LESO_BETA2Y_ATT");
+
+    _params_handles.flag_adrc_x_att        = param_find("FLAG_ADRC_X_ATT");
+    _params_handles.flag_adrc_y_att        = param_find("FLAG_ADRC_Y_ATT");
+
+    leso_x_att={};
+    leso_y_att={};
+    delay_x_att={};   
+    delay_y_att={};
+    lsef_x_att={};
+    lsef_y_att={};
 	/* fetch initial parameter values */
 	parameters_update();
 
@@ -738,6 +844,49 @@ MulticopterAttitudeControl::parameters_update()
 	param_get(_params_handles.distur_etaa ,          &(_params.distur_eta));
 	param_get(_params_handles.distur_temp_limitt ,   &(_params.distur_temp_limit));
 	param_get(_params_handles.distur_esti_2_limitt , &(_params.distur_esti_2_limit));
+
+
+	    param_get(_params_handles.lsef_wcx_att, &v);
+		_params.lsef_wcx_att = v;
+	    param_get(_params_handles.lsef_kpx_att, &v);
+		_params.lsef_kpx_att = v;
+	    param_get(_params_handles.lsef_kdx_att, &v);
+		_params.lsef_kdx_att = v;
+
+	    param_get(_params_handles.lsef_wcy_att, &v);
+		_params.lsef_wcy_att = v;
+	    param_get(_params_handles.lsef_kpy_att, &v);
+		_params.lsef_kpy_att = v;
+	    param_get(_params_handles.lsef_kdy_att, &v);
+		_params.lsef_kdy_att = v;
+
+		param_get(_params_handles.leso_hx_att, &v);
+		_params.leso_hx_att = v;
+		param_get(_params_handles.leso_w0x_att, &v);
+		_params.leso_w0x_att = v;
+		param_get(_params_handles.leso_b0x_att, &v);
+		_params.leso_b0x_att = v;
+		param_get(_params_handles.leso_beta1x_att, &v);
+		_params.leso_beta1x_att = v;
+		param_get(_params_handles.leso_beta2x_att, &v);
+		_params.leso_beta2x_att = v;
+
+		param_get(_params_handles.leso_hy_att, &v);
+		_params.leso_hy_att = v;
+		param_get(_params_handles.leso_w0y_att, &v);
+		_params.leso_w0y_att = v;
+		param_get(_params_handles.leso_b0y_att, &v);
+		_params.leso_b0y_att = v;
+		param_get(_params_handles.leso_beta1y_att, &v);
+		_params.leso_beta1y_att = v;
+		param_get(_params_handles.leso_beta2y_att, &v);
+		_params.leso_beta2y_att = v;
+
+
+		param_get(_params_handles.flag_adrc_x_att, &v);
+		_params.flag_adrc_x_att = v;
+		param_get(_params_handles.flag_adrc_y_att, &v);
+		_params.flag_adrc_y_att = v;
 
 	return OK;
 }
@@ -1086,7 +1235,18 @@ MulticopterAttitudeControl::observe_disturbance(float dt)
     //_distur_esti_2.print();
 }
 
+/*
+ *attitude eso
+ *Input: 
+ *Output: 
+ */
+void
+MulticopterAttitudeControl::attitude_leso(float dt)
+{
 
+  
+
+}
 
 /*
  * Attitude rates controller.
@@ -1096,6 +1256,13 @@ MulticopterAttitudeControl::observe_disturbance(float dt)
 void
 MulticopterAttitudeControl::control_attitude_rates(float dt)
 {
+
+    leso_y_att.h        = dt;
+    leso_y_att.w0       = _params.leso_w0y_att;
+    leso_y_att.b0       = _params.leso_b0y_att;
+    leso_y_att.beta1    = _params.leso_beta1y_att;
+    leso_y_att.beta2    = _params.leso_beta2y_att;
+
 	/* reset integral if disarmed */
 	if (!_armed.armed || !_vehicle_status.is_rotary_wing) {
 		_rates_int.zero();
@@ -1157,7 +1324,11 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 
 	_rates_sp_prev = _rates_sp;
 	_rates_prev = rates;
-
+    //_att_control(0) = _att_control(0) - _rates_int(0) + leso_y_att.z2 / leso_y_att.b0; 
+    //_att_control(0) = _att_control(0) - _rates_int(0); 
+    leso_y_att.u = _att_control(0);//roll
+    adrc_leso(&leso_y_att, rates(0));//roll
+    //_att_control(0) = _att_control(0) + 0.05f;
 	/* update integral only if motors are providing enough thrust to be effective */
 	if (_thrust_sp > MIN_TAKEOFF_THRUST) {
 		for (int i = AXIS_INDEX_ROLL; i < AXIS_COUNT; i++) {
@@ -1216,13 +1387,13 @@ MulticopterAttitudeControl::task_main()
 	 * do subscriptions
 	 */
 	//advertise debug value  
-	//const char ser[6]="droll";
+	const char ser[6]="droll";
 	// const char sep[7]="dpitch";
 	// const char sey[5]="dyaw";
-	//memcpy(distur_roll.key, ser, sizeof(ser));
+	memcpy(distur_roll.key, ser, sizeof(ser));
 	// memcpy(distur_pitch.key, sep, sizeof(sep));
 	// memcpy(distur_yaw.key, sey, sizeof(sey));
-    ///orb_advert_t pub_distur_roll = orb_advertise(ORB_ID(debug_key_value), &distur_roll);
+    orb_advert_t pub_distur_roll = orb_advertise(ORB_ID(debug_key_value), &distur_roll);
     // orb_advert_t pub_distur_pitch = orb_advertise(ORB_ID(debug_key_value), &distur_pitch);
     // orb_advert_t pub_distur_yaw = orb_advertise(ORB_ID(debug_key_value), &distur_yaw);
    
@@ -1309,8 +1480,9 @@ MulticopterAttitudeControl::task_main()
 			sensor_correction_poll();
             
 
-            //distur_roll.value = _distur_esti_2(0);
-            //orb_publish(ORB_ID(debug_key_value), pub_distur_roll, &distur_roll);
+            distur_roll.value = leso_y_att.z1;
+            distur_roll.value = -leso_y_att.z2 / leso_y_att.b0;
+            orb_publish(ORB_ID(debug_key_value), pub_distur_roll, &distur_roll);
             // distur_pitch.value = _distur_esti_2(1);
             // orb_publish(ORB_ID(debug_key_value1), pub_distur_pitch, &distur_pitch);
             // distur_yaw.value = _distur_esti_2(2);

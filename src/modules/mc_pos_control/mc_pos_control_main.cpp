@@ -2832,12 +2832,12 @@ MulticopterPositionControl::task_main()
 	/*
 	 * do subscriptions
 	 */
-	//advertise debug value  
-	const char ser[6]="zalti";
+	// //advertise debug value  
+	// const char ser[6]="zalti";
 
-	memcpy(distur_altitude.key, ser, sizeof(ser));
+	// memcpy(distur_altitude.key, ser, sizeof(ser));
 
-    orb_advert_t pub_distur_altitude = orb_advertise(ORB_ID(debug_key_value), &distur_altitude);
+ //    orb_advert_t pub_distur_altitude = orb_advertise(ORB_ID(debug_key_value), &distur_altitude);
 
 
 	/*
@@ -3018,15 +3018,15 @@ MulticopterPositionControl::task_main()
 		/* update previous velocity for velocity controller D part */
 		_vel_prev = _vel;
 
-	    //distur_altitude.value = -out_u;//_att_sp.thrust  -eso_alt.z3 / eso_alt.b0
-	   // distur_altitude.value = leso_alt.z1;
-	    //distur_altitude.value = distur_z;
-	    distur_altitude.value = distur_x;
-	    distur_altitude.value = leso_x.z1;
-	    //distur_altitude.value = td_alt.v1;
-	    //distur_altitude.value = _att_sp.thrust;
-	    //distur_altitude.value =_control_mode.flag_control_climb_rate_enabled;
-        orb_publish(ORB_ID(debug_key_value), pub_distur_altitude, &distur_altitude);
+	   //  //distur_altitude.value = -out_u;//_att_sp.thrust  -eso_alt.z3 / eso_alt.b0
+	   // // distur_altitude.value = leso_alt.z1;
+	   //  //distur_altitude.value = distur_z;
+	   //  distur_altitude.value = distur_x;
+	   //  distur_altitude.value = leso_x.z1;
+	   //  //distur_altitude.value = td_alt.v1;
+	   //  //distur_altitude.value = _att_sp.thrust;
+	   //  //distur_altitude.value =_control_mode.flag_control_climb_rate_enabled;
+    //     orb_publish(ORB_ID(debug_key_value), pub_distur_altitude, &distur_altitude);
 
 		
 		/* publish attitude setpoint
