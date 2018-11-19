@@ -747,7 +747,7 @@ PARAM_DEFINE_FLOAT(LSEF_WCY_ATT, 1.0f);
  * @max 2
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(LESO_HY_ATT, 0.01f);
+PARAM_DEFINE_FLOAT(LESO_HY_ATT, 0.004f);
 
 /**
  * LESO_W0Y_ATT
@@ -796,3 +796,27 @@ PARAM_DEFINE_FLOAT(LESO_BETA1Y_ATT ,100.0f);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(LESO_BETA2Y_ATT, 1000.0f);
+
+/**
+ * FLAG_STABLE_1
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min -5
+ * @max 5
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(FLAG_STABLE_1, -0.5f);
+
+/**
+ * ROLL_MAN_MAX
+ *
+ * Increasing this value will make automatic and manual takeoff slower.
+ * If it's too slow the drone might scratch the ground and tip over.
+ *
+ * @min -6.28
+ * @max 6.28
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(ROLL_MAN_MAX, 0.7f);

@@ -227,6 +227,8 @@ private:
 
     math::Vector<3>     _att_rates;    /**< _att_rates */
 
+    math::Vector<3>     _distur_att;//leso z2/bo
+
 	math::Matrix<3, 3>  _I;				/**< identity matrix */
 
 	math::Matrix<3, 3>	_board_rotation = {};	/**< rotation matrix for the orientation that the board is mounted */
@@ -234,6 +236,7 @@ private:
     math::Matrix<3, 3>  _moment_inertia;
 
     math::Matrix<3, 3>  _moment_inertia_inv;
+    float temp_anlge;
 
 	struct {
 		param_t roll_p;
@@ -315,6 +318,9 @@ private:
         param_t flag_adrc_x_att;
         param_t flag_adrc_y_att;
 
+        param_t flag_stable_1;
+
+        param_t roll_man_max;
 
 	}		_params_handles;		/**< handles for interesting parameters */
 
@@ -383,6 +389,10 @@ private:
 
         float flag_adrc_x_att;
         float flag_adrc_y_att;
+
+        float flag_stable_1;
+
+        float roll_man_max;
 
 	}		_params;
 
@@ -598,6 +608,8 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
      _moment_inertia.identity();
      _moment_inertia_inv.identity();
 
+    _distur_att.zero();
+    temp_anlge = 0.0f;
 	_params_handles.roll_p			= 	param_find("MC_ROLL_P");
 	_params_handles.roll_rate_p		= 	param_find("MC_ROLLRATE_P");
 	_params_handles.roll_rate_i		= 	param_find("MC_ROLLRATE_I");
@@ -679,6 +691,10 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 
     _params_handles.flag_adrc_x_att        = param_find("FLAG_ADRC_X_ATT");
     _params_handles.flag_adrc_y_att        = param_find("FLAG_ADRC_Y_ATT");
+
+    _params_handles.flag_stable_1      = param_find("FLAG_STABLE_1");
+
+   _params_handles.roll_man_max      = param_find("ROLL_MAN_MAX");
 
     leso_x_att={};
     leso_y_att={};
@@ -888,6 +904,12 @@ MulticopterAttitudeControl::parameters_update()
 		param_get(_params_handles.flag_adrc_y_att, &v);
 		_params.flag_adrc_y_att = v;
 
+		param_get(_params_handles.flag_stable_1, &v);
+		_params.flag_stable_1 = v;
+
+		param_get(_params_handles.roll_man_max, &v);
+		_params.roll_man_max = v;
+
 	return OK;
 }
 
@@ -1061,6 +1083,25 @@ MulticopterAttitudeControl::control_attitude(float dt)
 	/* construct attitude setpoint rotation matrix */
 	math::Quaternion q_sp(_v_att_sp.q_d[0], _v_att_sp.q_d[1], _v_att_sp.q_d[2], _v_att_sp.q_d[3]);
 	math::Matrix<3, 3> R_sp = q_sp.to_dcm();
+
+    if(_params.flag_stable_1 > 0.0f)
+	{   
+		if(_manual_control_sp.y > 0.02f || _manual_control_sp.y < -0.02f){
+			temp_anlge += _manual_control_sp.y * _params.roll_man_max * dt;
+			if(temp_anlge > M_PI_F)
+			{
+			    temp_anlge = temp_anlge - M_TWOPI_F;
+			}
+			if(temp_anlge < -M_PI_F)
+			{
+			    temp_anlge = temp_anlge + M_TWOPI_F;
+			}
+		}
+		R_sp.from_euler(temp_anlge, 0.0f, 0.0f);
+	}
+    //math::Vector<3> angle_temp= R_sp.to_euler();
+    //angle_temp.print();
+
 	//R_sp.identity();
 	/* get current rotation matrix from control state quaternions */
 	math::Quaternion q_att(_ctrl_state.q[0], _ctrl_state.q[1], _ctrl_state.q[2], _ctrl_state.q[3]);
@@ -1266,6 +1307,8 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	/* reset integral if disarmed */
 	if (!_armed.armed || !_vehicle_status.is_rotary_wing) {
 		_rates_int.zero();
+		leso_y_att.z1 = 0.0f;
+		leso_y_att.z2 = 0.0f;
 	}
 
 	/* get transformation matrix from sensor/board to body frame */
@@ -1320,12 +1363,28 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	_att_control = rates_p_scaled.emult(rates_err) +
 		       _rates_int +
 		       rates_d_scaled.emult(_rates_prev - rates) / dt +
-		       _params.rate_ff.emult(_rates_sp) - _distur_esti_2 ;
+		       _params.rate_ff.emult(_rates_sp);
+
+	// _att_control = rates_p_scaled.emult(rates_err) +
+	// 	       rates_d_scaled.emult(_rates_prev - rates) / dt ;
 
 	_rates_sp_prev = _rates_sp;
 	_rates_prev = rates;
-    //_att_control(0) = _att_control(0) - _rates_int(0) + leso_y_att.z2 / leso_y_att.b0; 
-    //_att_control(0) = _att_control(0) - _rates_int(0); 
+
+    if(_params.flag_stable_1 > 0.0f)
+    {
+    	_att_control(1) = 0.0f;
+    	_att_control(2) = 0.0f;
+    }
+
+	_distur_att(0) = leso_y_att.z2 / leso_y_att.b0;//Opposite sign with roll 
+    _distur_att(0) = math::constrain(_distur_att(0), -0.30f, 0.30f);
+
+	if(_params.flag_adrc_y_att > 0.0f)
+	{
+     _att_control(0) = _att_control(0) - _rates_int(0) + _distur_att(0); 
+	}
+ 
     leso_y_att.u = _att_control(0);//roll
     adrc_leso(&leso_y_att, rates(0));//roll
     //_att_control(0) = _att_control(0) + 0.05f;
@@ -1387,15 +1446,15 @@ MulticopterAttitudeControl::task_main()
 	 * do subscriptions
 	 */
 	//advertise debug value  
-	const char ser[6]="droll";
-	// const char sep[7]="dpitch";
-	// const char sey[5]="dyaw";
-	memcpy(distur_roll.key, ser, sizeof(ser));
-	// memcpy(distur_pitch.key, sep, sizeof(sep));
-	// memcpy(distur_yaw.key, sey, sizeof(sey));
-    orb_advert_t pub_distur_roll = orb_advertise(ORB_ID(debug_key_value), &distur_roll);
-    // orb_advert_t pub_distur_pitch = orb_advertise(ORB_ID(debug_key_value), &distur_pitch);
-    // orb_advert_t pub_distur_yaw = orb_advertise(ORB_ID(debug_key_value), &distur_yaw);
+	 const char ser[6]="droll";
+	// // const char sep[7]="dpitch";
+	// // const char sey[5]="dyaw";
+	 memcpy(distur_roll.key, ser, sizeof(ser));
+	// // memcpy(distur_pitch.key, sep, sizeof(sep));
+	// // memcpy(distur_yaw.key, sey, sizeof(sey));
+     orb_advert_t pub_distur_roll = orb_advertise(ORB_ID(debug_key_value), &distur_roll);
+ //    // orb_advert_t pub_distur_pitch = orb_advertise(ORB_ID(debug_key_value), &distur_pitch);
+ //    // orb_advert_t pub_distur_yaw = orb_advertise(ORB_ID(debug_key_value), &distur_yaw);
    
 
 
@@ -1480,9 +1539,10 @@ MulticopterAttitudeControl::task_main()
 			sensor_correction_poll();
             
 
-            distur_roll.value = leso_y_att.z1;
-            distur_roll.value = -leso_y_att.z2 / leso_y_att.b0;
-            orb_publish(ORB_ID(debug_key_value), pub_distur_roll, &distur_roll);
+             //distur_roll.value = leso_y_att.z1;
+             distur_roll.value = _distur_att(0);
+             //distur_roll.value = dt;
+             orb_publish(ORB_ID(debug_key_value), pub_distur_roll, &distur_roll);
             // distur_pitch.value = _distur_esti_2(1);
             // orb_publish(ORB_ID(debug_key_value1), pub_distur_pitch, &distur_pitch);
             // distur_yaw.value = _distur_esti_2(2);
